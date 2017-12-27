@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+	<!--
+		uses jQuery, Phaser, cheet.js, phaser-swipe, and SweetAlert2.
+		jQuery: https://jquery.org/
+		Phaser: https://phaser.io/
+		cheet.js: http://lou.wtf/cheet.js/
+		phaser-swipe: https://github.com/flogvit/phaser-swipe
+		SweetAlert2: https://limonte.github.io/sweetalert2/
+	-->
+    <head>
+        <meta charset="UTF-8" />
+        <title>Swirl</title>
+		<script src="assets/scripts/jquery-3.2.1.min.js"></script>
+        <script src="assets/scripts/phaser.min.js"></script>
+        <script src="assets/scripts/swipe.js"></script>
+		<script src="assets/scripts/cheet.min.js"></script>
+		<script src="assets/scripts/sweetalert2.all.min.js"></script>
+		<style>
+			body, #game {
+				margin: 0 auto;
+				padding: 0 auto;
+				width: 100%;
+				height: 100%;
+				position: fixed;
+				overflow: hidden;
+				background-color: #000000;
+			}
+		</style>
+    </head>
+    <body>
+		<div id='game'></div>
+		<script type="text/javascript">
+			window.onload = function() {
+				var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+				var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+				var url = new URL(window.location.href);
+				const defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
+				
+				var obstacles = [];
+				var circles = [];
+				var cats = [];
+				var holes = [];
+				var player;
+				var obstacle;
+				var circle;
+				var hole;
+				var keylist;
+				var mobile;
+				var music;
+				
+				var debug = (url.searchParams.get("debug") != null);
+				var save = (url.searchParams.get("load"));
+				var friction = ((debug)?8:4);
+				var extra = true;
+				var buildingMode = false;
+				var spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
+				var dieSound = false;
+				var dieAudio;
+
+				var game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload: preload, create: create, update: update, render: render});
+				
+				function goodBoi() {
+					if (buildingMode) {
+						buildingMode = false;
+					}
+					spinnyBoi = true;
+				}
+				
+				function setTrack(key) {
+					if (music) {
+						music.stop();
+					}
+					music = game.add.audio(key);
+					music.play('', 0, 0.75, true);
+				}
+				
+				function oneSpinnyBoi(obj) {
+					if (obj.body) {
+						obj.body.angularVelocity = 999;
+					}
+				}
+				
+				function roundToHundredths(x) {
+					return Math.round(100*x)/100;
+				}
+				
+				// https://phaser.io/examples/v2/p2-physics/accelerate-to-object
+				function moveTowards(obj1, obj2, speed) {
+					if (obj1.body && obj2.body) {
+						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
+						obj1.body.velocity.x = (Math.cos(angle)*speed)+obj1.body.velocity.x;
+						obj1.body.velocity.y = (Math.sin(angle)*speed)+obj1.body.velocity.y;
+					}
+				}
+				
+				function moveToHole(obj) {
+					if ((obj["name"] != "player") || spinnyBoi) {
+						if (obj.body) {
+							for (var i in holes) {
+								if ((holes[i] != obj) && holes[i].alive) {
+									moveTowards(obj, holes[i], (holes[i].width/15)+19);
+									if ((Phaser.Math.distance(holes[i].x, holes[i].y, obj.x, obj.y) <= (10+(holes[i].width*0.75)+obj.offsetX))) {
+										if (dieSound) {
+											dieAudio.play('', 0, 1);
+										}
+										if (spinnyBoi) {
+											obj.body.x = game.rnd.integerInRange(5, w-5);
+											obj.body.y = game.rnd.integerInRange(5, h-5);
+										} else if (obj["name"] == "hole") {
+											if ((holes[i].width < obj.width) && obj.body) {
+												obj.width += (holes[i].width/(obj.width/5));
+												obj.height += (holes[i].height/(obj.height/5));
+												obj.body.setCircle(obj.width/1.85);
+												holes[i].destroy();
+											} else if (obj.body) {
+												holes[i].width += (obj.width/(holes[i].width/5));
+												holes[i].height += (obj.height/(holes[i].height/5));
+												holes[i].body.setCircle(holes[i].width/1.85);
+												obj.destroy();
+											}
+										} else {
+											obj.destroy();
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				function lhc() {
+					hole = game.add.sprite(player.x, player.y, 'blackhole');
+					hole.name = 'hole';
+					hole.scale.setTo(0.055, 0.055);
+					game.physics.p2.enable(hole, debug);
+					hole.body.kinematic = true;
+					hole.anchor.setTo(0.5, 0.5);
+					hole.body.setCircle(hole.width/1.85);
+					holes.push(hole);
+				}
+				
+				function preload() {
+					game.load.image('player', 'assets/images/player.png');
+					game.load.image('box', 'assets/images/box.png');
+					game.load.image('circle', 'assets/images/circle.png');
+					game.load.image('cat', 'assets/images/cat.png');
+					game.load.image('blackhole', 'assets/images/blackhole.png');
+					game.load.image('placeholder', 'assets/images/placeholder.png');
+					
+					game.load.audio('mii', 'assets/audio/mii.mp3');
+					game.load.audio('die', 'assets/audio/die.mp3');
+				}
+				
+				String.prototype.replaceAll = function(search, replacement) {
+					var target = this;
+					return target.replace(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g'), replacement);
+				};
+				
+				// the key used to decode and encode save data
+				// the first one specified in each array is the one to replace, and the second one is the one to replace it with
+				// digits are left unchanged when decoding and encoding
+				var saveLibrary = [
+					// shortens the keys for each of the sections
+					['"o":', 'o'], // (o)bstacles
+					['"c":', 'c'], // (c)ircles
+					['"b":', 'b'], // (b)lack holes
+					['"d":', 'd'], // cats, c was taken so next letter (d)
+					['"p":', 'p'], // (p)layer
+					['"g":', 'g'], // (g)eneral
+					
+					// shortens some of the structure
+					['],[', 'J'], // inter(J)ection
+					['[[', 'E'], // doubl(E) bracket
+					[']]', 'U'], // do(U)ble bracket
+					['[]', 'N'], // (N)one (no contents for this section of the JSON)
+					[']}', 'R'], // (R)ight close
+					['{[', 'L'], // (L)eft close
+					['0,0', 'Z'], // two (Z)eros
+					
+					// just switched characters to make sure the URL doesn't encode anything
+					['[', 'B'], // (B)racket
+					[']', 'C'], // (C)losing bracket
+					['{', 'Y'], // curl(Y) bracket
+					['}', 'T'], // curly bracke(T)
+					['"', 'Q'], // (Q)uote
+					[',', 'M'], // co(M)ma
+					[':', 'O'], // c(o)lon
+					['-', 'P'], // o(P)posite
+					['.', 'D'], // (D)ecimal
+				];
+					
+				function jsonEncode(text) {
+					for (var i in saveLibrary) {
+						text = text.replaceAll(saveLibrary[i][0], saveLibrary[i][1]);
+					}
+					return text;
+				}
+				
+				function jsonDecode(text) {
+					if (debug) {
+						console.log("Save file: " + text + "\nLength: " + text.length);
+					}
+					for (var j in saveLibrary) {
+						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0])
+					}
+					if (debug) {
+						console.log("Decoded save file: " + text + "\nLength: " + text.length);
+					}
+					return text;
+				}
+				
+				function onAll(array, func) {
+					for (var i in array) {
+						func(array[i]);
+					}
+				}
+				
+				function frictionCheck(spr, noFriction) {
+					if (spr.body) {
+						if (spr.anchor) {
+							spr.anchor.setTo(0.5, 0.5);
+						}
+						if ((Math.abs(spr.body.x) >= Math.abs((game.world.bounds["width"])+500)) || (Math.abs(spr.body.y) >= (Math.abs(game.world.bounds["height"])+500))) {
+							if (spr["name"] == "player") {
+								spr.kill();
+								spr.reset(w/2, h/2);
+								game.camera.reset(w/2, h/2);
+								game.camera.follow(spr);
+								game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+							} else {
+								spr.destroy();
+								return;
+							}
+						}
+					}
+										
+					 if (buildingMode && spr && spr.body) {
+						spr.body.velocity.x = 0;
+						spr.body.velocity.y = 0;
+						if (spr["name"] != "player") {
+							spr.body.angularVelocity = 0;
+						}
+					} else if (spr && spr.body && (friction != 0)) {
+						if (!noFriction) {
+							if (spr.body.velocity.x > 0) {
+								spr.body.velocity.x -= (friction);
+							} else if (spr.body.velocity.x < 0) {
+								spr.body.velocity.x += (friction);
+							} else {
+								spr.body.velocity.x = 0;
+							}
+						}
+						if (Math.abs(spr.body.velocity.x) <= 10) {
+							spr.body.velocity.x = 0;
+						};
+						
+						if (!noFriction) {
+							if (spr.body.velocity.y > 0) {
+								spr.body.velocity.y -= (friction);
+							} else if (spr.body.velocity.y < 0) {
+								spr.body.velocity.y += (friction);
+							} else {
+								spr.body.velocity.y = 0;
+							}
+						}
+						if (Math.abs(spr.body.velocity.y) <= 10) {
+							spr.body.velocity.y = 0;
+						}
+						
+						if (spr["name"] != "player") {
+							if (spr.body.angularVelocity > 0) {
+								spr.body.angularVelocity -= 0.01;
+							} else if (spr.body.angularVelocity < 0) {
+								spr.body.angularVelocity += 0.01;
+							} else {
+								spr.body.angularVelocity = 0;
+							}
+						}
+						
+						if (spr["name"] == "hole") {
+							if (spr.body.x >= (game.world.bounds["width"]-(spr.width/2)-25)) {
+								spr.body.velocity.x = -45;
+							}
+							if (spr.body.y >= (game.world.bounds["height"]-(spr.height/2)-25)) {
+								spr.body.velocity.y = -45;
+							}
+							if ((spr.body.x <= (game.world.bounds["x"]+(spr.width/2)+25))) {
+								spr.body.velocity.x = 45;
+							}
+							if (spr.body.y <= (game.world.bounds["y"]+(spr.height/2)+25)) {
+								spr.body.velocity.y = 45;
+							}	
+						}
+					}
+				}
+				
+				function render() {
+					game.renderer.renderSession.roundPixels = true;
+				}
+				
+				function create() {
+					mobile = !(game.device.desktop);
+					if ((url.searchParams.get("mobile")) != null) {
+						mobile = true;
+					} else if ((url.searchParams.get("desktop")) != null) {
+						mobile = false;
+					}
+					
+					dieAudio = game.add.audio('die');
+					
+					this.swipe = new Swipe(this.game);
+					game.world.setBounds(0, 0, w+1, h+1);					
+					game.physics.startSystem(Phaser.Physics.P2JS);
+					game.stage.backgroundColor = '#404040';
+										
+					player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
+					player.name = 'player';
+					game.physics.p2.enable(player, debug);
+					
+					game.physics.p2.restitution = 1.5;
+
+					keylist = game.input.keyboard.addKeys({ 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
+					
+					game.camera.follow(player);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					
+					cheet('↑ ↑ ↓ ↓ ← → ← → b a', goodBoi);
+					cheet('dead', function() {
+						dieSound = !dieSound;
+						dieAudio.play('', 0, 1);
+					});
+					
+					game.camera.follow(player);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					
+					if (!mobile) {
+						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont).sendToBack();
+						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont).sendToBack();
+						game.add.text(5, 45, "Q: summons a box", defaultFont).sendToBack();
+						game.add.text(5, 65, "E: summons a ball", defaultFont).sendToBack();
+						game.add.text(5, 85, "R: resets the canvas", defaultFont).sendToBack();
+						
+						if (extra) {
+							game.add.text(5, 115, "C: summons a cat", defaultFont).sendToBack();
+							game.add.text(5, 135, "X: summons a black hole", defaultFont).sendToBack();
+							game.add.text(5, 155, "P: remove world borders", defaultFont).sendToBack();
+							game.add.text(5, 175, "F: increases friction", defaultFont).sendToBack();
+							game.add.text(5, 195, "G: decreases friction", defaultFont).sendToBack();
+							game.add.text(5, 215, "T: toggle building mode", defaultFont).sendToBack();
+							game.add.text(5, 235, "U: save current game state", defaultFont).sendToBack();
+							game.add.text(5, 255, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
+							game.add.text(5, 275, "Y: reset the tiny square", defaultFont).sendToBack();
+						}
+					} else {
+						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 65, "two fingers: save game", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 115, "this mode is mostly intended for viewing others' creations", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 145, "please open this link on a laptop or desktop to get the full experience", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.world.setBounds(0, 0, Infinity, Infinity);
+						player.body.x = 50;
+						player.body.y = 250;
+					};
+					
+					game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
+					game.scale.fullScreenScaleMode = Phaser.ScaleManager.RESIZE;
+					game.scale.parentIsWindow = true;
+					
+					if (save) {
+						var result;
+						var didErr = false;
+						try {
+							result = JSON.parse(jsonDecode(save));
+						} catch(err) {
+							didErr = true;
+						};
+						if (didErr || !result || (!(result["o"]))) {
+							game.paused = true;
+							game.input.keyboard.stop();
+							swal({
+								type: 'error',
+								title: 'Corrupted Save',
+								text: 'The save file you have attempted to load is corrupted or invalid.'
+							}).then(() => {
+								game.paused = false;
+								game.input.keyboard.start();
+							});
+						} else {
+							for (var i in result["o"]) {
+								if (result["o"][i]) {
+									obstacle = game.add.sprite(result["o"][i][0], result["o"][i][1], 'box');
+									obstacle.name = 'obstacle';
+									game.physics.p2.enable(obstacle, debug);
+									obstacle.body.kinematic = true;
+									obstacles.push(obstacle);
+								}
+							}
+							for (var i in result["c"]) {
+								if (result["c"][i]) {
+									circle = game.add.sprite(result["c"][i][0], result["c"][i][1], 'circle');
+									circle.name = 'circle';
+									game.physics.p2.enable(circle, debug);
+									circle.anchor.setTo(0.5, 0.5);
+									circle.body.setCircle(circle.width/2);
+									circles.push(circle);
+									circle.body.velocity.x = result["c"][i][2];
+									circle.body.velocity.y = result["c"][i][3];
+								}
+							}
+							for (var i in result["d"]) {
+								if (result["d"][i]) {
+									cat = game.add.sprite(result["d"][i][0], result["d"][i][1], 'cat');
+									cat.name = 'cat';
+									cat.scale.setTo(0.4, 0.4);
+									game.physics.p2.enable(cat, debug);
+									cats.push(cat);
+									cat.body.velocity.x = result["d"][i][2];
+									cat.body.velocity.y = result["d"][i][3];
+									cat.angle = result["d"][i][4];
+									cat.body.angularVelocity = result["d"][i][5];
+								}
+							}
+							if (result["b"]) {
+								for (var i in result["b"]) {
+									if (result["b"][i]) {
+										hole = game.add.sprite(result["b"][i][0], result["b"][i][1], 'blackhole');
+										hole.name = 'hole';
+										if (result["b"][i][2]) {
+											hole.scale.setTo(result["b"][i][2], result["b"][i][3]);
+										}
+										game.physics.p2.enable(hole, debug);
+										hole.body.kinematic = true;
+										hole.anchor.setTo(0.5, 0.5);
+										hole.body.setCircle(hole.width/2);
+										holes.push(hole);
+									}
+								}
+							}
+							// p = playerx, playery, playervelocityx, playervelocityy
+							// g = friction, world width, world height, building mode (1 or 0), restitution
+							player.body.x = result["p"][0];
+							player.body.y = result["p"][1];
+							player.body.velocity.x = result["p"][2];
+							player.body.velocity.y = result["p"][3];
+							friction = result["g"][0];
+							if (result["g"][1]) {
+								if (result["g"][1] == -1) {
+									game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+								} else {
+									game.world.setBounds(0, 0, result["g"][1], result["g"][2]);
+								}
+							};
+							buildingMode = (result["g"][3] == 1);
+							if (result["g"][4]) {
+								game.physics.p2.restitution = result["g"][4];
+							}
+							spinnyBoi = (result["g"][5] == 1);
+							if (result["g"][6]) {
+								game.camera.x = result["g"][6];
+								game.camera.y = result["g"][7];
+							}
+						}
+					}
+				}
+
+				function update() {
+					if (holes.length > 0) {
+						game.world.forEachAlive(moveToHole, this);
+					};
+					
+					if (player.body == null) {
+						player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
+						player.name = 'player';
+						game.physics.p2.enable(player, debug);
+						game.physics.p2.restitution = 1.5;
+						player.kill();
+					};
+					
+					player.body.angularVelocity = 8;
+					game.world.forEachExists(frictionCheck, this);
+					
+					if (game.input.pointer1.duration >= 4000 && (game.input.pointer2.isUp)) {
+						player.body.x = 50;
+						player.body.y = 250;
+						player.body.velocity.x = 0;
+						player.body.velocity.y = 0;
+					}
+					
+					if (mobile) {
+						buildingMode = false;
+						var direction = this.swipe.check();
+						if (direction !== null) {
+							switch(direction.direction) {
+								case this.swipe.DIRECTION_LEFT:
+									player.body.moveLeft(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_RIGHT:
+									player.body.moveRight(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_UP:
+									player.body.moveUp(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_DOWN:
+									player.body.moveDown(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_UP_LEFT:
+									player.body.moveUp(((buildingMode)?250:450));
+									player.body.moveLeft(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_UP_RIGHT:
+									player.body.moveUp(((buildingMode)?250:450));
+									player.body.moveRight(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_DOWN_LEFT:
+									player.body.moveDown(((buildingMode)?250:450));
+									player.body.moveLeft(((buildingMode)?250:450));
+									break;
+								case this.swipe.DIRECTION_DOWN_RIGHT:
+									player.body.moveDown(((buildingMode)?250:450));
+									player.body.moveRight(((buildingMode)?250:450));
+									break;
+							}
+						}
+					}
+							
+					if (keylist.up.isDown || keylist.up2.isDown) {
+						player.body.moveUp(((buildingMode)?250:350));
+					} else if (keylist.down.isDown || keylist.down2.isDown) {
+						player.body.moveDown(((buildingMode)?250:350));
+					}
+				
+					if (keylist.left.isDown || keylist.left2.isDown) {
+						player.body.moveLeft(((buildingMode)?250:350));
+					} else if (keylist.right.isDown || keylist.right2.isDown) {
+						player.body.moveRight(((buildingMode)?250:350));
+					}
+					
+					if (keylist.easter.justDown && extra && !(keylist.easter.ctrlKey)) {
+						cat = game.add.sprite(player.x, player.y, 'cat');
+						cat.name = 'cat';
+						cat.scale.setTo(0.4, 0.4);
+						game.physics.p2.enable(cat, debug);
+						cats.push(cat);
+					} else if (keylist.expand.justDown && extra && !(keylist.expand.ctrlKey)) {
+						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+					} else if (keylist.friction.isDown && extra) {
+						friction++;
+					} else if (keylist.friction2.isDown && extra) {
+						friction--;
+					} else if (keylist.toggle.justDown) {
+						buildingMode = !(buildingMode);
+					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
+						game.paused = true;
+						var result = {};
+						result["o"] = [];
+						for (var i in obstacles) {
+							if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
+								result["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y)]);
+							}
+						}
+						result["c"] = [];
+						for (var i in circles) {
+							if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
+								result["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
+							}
+						}
+						result["d"] = [];
+						for (var i in cats) {
+							if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
+								result["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
+							}
+						}
+						result["b"] = [];
+						for (var i in holes) {
+							if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
+								result["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
+							}
+						}
+						
+						// p = playerx, playery, playervelocityx, playervelocityy
+						// g = friction, world width, world height, building mode (1 or 0), restitution
+						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
+						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y];
+						var b64data = jsonEncode(JSON.stringify(result));
+						var prefix = "https://atenfyr.github.io/swirl"
+						if (debug) {
+							prefix = prefix + "?debug&load="
+						} else {
+							prefix = prefix + "?load="
+						}
+						game.input.keyboard.stop();
+						swal({
+							type: 'success',
+							title: 'Saved',
+							html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="30">' + prefix + b64data + '</textarea>'
+						}).then(() => {
+							game.paused = false;
+							game.input.keyboard.start();
+						});
+					}
+					
+					if (keylist.move.justDown && player.alive) {
+						obstacle = game.add.sprite(player.x, player.y, 'box');
+						obstacle.name = 'obstacle';
+						game.physics.p2.enable(obstacle, debug);
+						obstacle.body.kinematic = true;
+						obstacles.push(obstacle);
+					} else if (keylist.unstuck.isDown) {
+						player.body.x -= 10;
+						player.body.y -= 10;
+					}
+					
+					if (keylist.hole.justDown && player.alive) {
+						lhc();
+					} else if (keylist.move2.justDown && player.alive) {
+						circle = game.add.sprite(player.x, player.y, 'circle');
+						circle.name = 'circle';
+						game.physics.p2.enable(circle, debug);
+						circle.anchor.setTo(0.5, 0.5);
+						circle.body.setCircle(circle.width/2);
+						circles.push(circle);
+					} else if (keylist.speed1.isDown) {
+						player.body.velocity.y -= 20;
+					} else if (keylist.speed2.isDown) {
+						player.body.velocity.x -= 20;
+					} else if (keylist.speed3.isDown) {
+						player.body.velocity.y += 20;
+					} else if (keylist.speed4.isDown) {
+						player.body.velocity.x += 20;
+					} else if (keylist.reset.isDown) {
+						player.kill();
+						player.reset(w/2, h/2);
+						game.camera.reset(w/2, h/2);
+						game.camera.follow(player);
+						game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+						
+						for (var i in circles) {
+							circles[i].destroy();
+						}
+						for (var i in obstacles) {
+							obstacles[i].destroy();
+						}
+						for (var i in cats) {
+							cats[i].destroy();
+						}
+						for (var i in holes) {
+							holes[i].destroy();
+						}
+						obstacles = [];
+						circles = [];
+						cats = [];
+						holes = [];
+						friction = ((debug)?8:4);
+					} else if (keylist.preset.isDown) {
+						player.kill();
+						player.reset(w/2, h/2);
+						game.camera.reset(w/2, h/2);
+						game.camera.follow(player);
+						game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					}
+					
+					if (keylist.run.justDown) {
+						game.paused = true;
+						game.input.keyboard.stop();
+						swal({
+							title: "hacking skills",
+							html: "not quite as l33t as <a href='https://www.youtube.com/watch?v=o0Z0Jo1tlmI' target='_blank'>this guy</a> though",
+							input: "text",
+							showCancelButton: true,
+							confirmButtonText: 'hack',
+							cancelButtonText: 'cancel'
+						}).then((a) => {
+							game.paused = false;
+							game.input.keyboard.start();
+							if (a["value"]) {
+								var resp;
+								var mode = "success";
+								if (a["value"].charAt(a["value"].length-1) == ";") {
+									a["value"] = a["value"].substring(0, a["value"].length-1);
+								};
+								try {
+									resp = eval('(' + a["value"] + ')');
+								} catch(err) {
+									mode = "error";
+								};
+								if (mode == "success") {
+									swal({
+										title: "you did a good hack",
+										text: resp,
+										type: mode
+									});
+								}
+							}
+						});
+					}
+					
+					if (player.body.velocity.x >= 12000) {
+						player.body.velocity.x -= 5000;
+					}
+					if (player.body.velocity.y >= 12000) {
+						player.body.velocity.y -= 5000;
+					}
+				}
+			}
+		</script>
+    </body>
+</html>
