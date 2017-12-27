@@ -330,6 +330,9 @@
 						dieSound = !dieSound;
 						dieAudio.play('', 0, 1);
 					});
+					cheet('m i i', function() {
+						setTrack('mii');
+					});
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
