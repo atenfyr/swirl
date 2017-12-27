@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<!--
-		uses jQuery, Phaser, cheet.js, phaser-swipe, and SweetAlert2.
+		Uses jQuery, Phaser, cheet.js, phaser-swipe, and SweetAlert2.
 		jQuery: https://jquery.org/
 		Phaser: https://phaser.io/
 		cheet.js: http://lou.wtf/cheet.js/
@@ -583,7 +583,7 @@
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
 						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y];
 						var b64data = jsonEncode(JSON.stringify(result));
-						var prefix = "https://atenfyr.github.io/swirl"
+						var prefix = "https://atenfyr.github.io/swirl/"
 						if (debug) {
 							prefix = prefix + "?debug&load="
 						} else {
