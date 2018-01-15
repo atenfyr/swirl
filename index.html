@@ -32,33 +32,26 @@
 		<div id='game'></div>
 		<script type="text/javascript">
 			window.onload = function() {
-				var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-				var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-				var url = new URL(window.location.href);
+				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+				let url = new URL(window.location.href);
 				const defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
 				
-				var obstacles = [];
-				var circles = [];
-				var cats = [];
-				var holes = [];
-				var player;
-				var obstacle;
-				var circle;
-				var hole;
-				var keylist;
-				var mobile;
-				var music;
+				let obstacles = [];
+				let circles = [];
+				let cats = [];
+				let holes = [];
+				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio;
 				
-				var debug = (url.searchParams.get("debug") != null);
-				var save = (url.searchParams.get("load"));
-				var friction = ((debug)?8:4);
-				var extra = true;
-				var buildingMode = false;
-				var spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
-				var dieSound = false;
-				var dieAudio;
+				let debug = (url.searchParams.get("debug") != null);
+				let save = (url.searchParams.get("load"));
+				let friction = ((debug)?8:4);
+				let extra = true;
+				let buildingMode = false;
+				let spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
+				let dieSound = false;
 
-				var game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload: preload, create: create, update: update, render: render});
+				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload: preload, create: create, update: update, render: render});
 				
 				function goodBoi() {
 					if (buildingMode) {
@@ -67,12 +60,17 @@
 					spinnyBoi = true;
 				}
 				
+				/*
+					note: track names can't contain o, c, b, d, p, or g, or else save files which were saved
+					with them on will not load (bad design i know)
+				*/
 				function setTrack(key) {
 					if (music) {
 						music.stop();
 					}
 					music = game.add.audio(key);
 					music.play('', 0, 0.75, true);
+					currentTrack = key;
 				}
 				
 				function oneSpinnyBoi(obj) {
@@ -85,7 +83,7 @@
 					return Math.round(100*x)/100;
 				}
 				
-				// https://phaser.io/examples/v2/p2-physics/accelerate-to-object
+				// altered from https://phaser.io/examples/v2/p2-physics/accelerate-to-object
 				function moveTowards(obj1, obj2, speed) {
 					if (obj1.body && obj2.body) {
 						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
@@ -160,7 +158,7 @@
 				// the key used to decode and encode save data
 				// the first one specified in each array is the one to replace, and the second one is the one to replace it with
 				// digits are left unchanged when decoding and encoding
-				var saveLibrary = [
+				let saveLibrary = [
 					// shortens the keys for each of the sections
 					['"o":', 'o'], // (o)bstacles
 					['"c":', 'c'], // (c)ircles
@@ -333,6 +331,9 @@
 					cheet('m i i', function() {
 						setTrack('mii');
 					});
+					cheet('c h a o s', function() {
+						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0MQmiiQM1R";
+					});
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
@@ -463,6 +464,10 @@
 								game.camera.x = result["g"][6];
 								game.camera.y = result["g"][7];
 							}
+							if (result["g"][8]) {
+								setTrack(result["g"][8]);
+								dieSound = (result["g"][9] == 1);
+							}
 						}
 					}
 				}
@@ -555,7 +560,7 @@
 						buildingMode = !(buildingMode);
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
 						game.paused = true;
-						var result = {};
+						let result = {};
 						result["o"] = [];
 						for (var i in obstacles) {
 							if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
@@ -584,7 +589,7 @@
 						// p = playerx, playery, playervelocityx, playervelocityy
 						// g = friction, world width, world height, building mode (1 or 0), restitution
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y];
+						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, currentTrack, ((dieSound)?1:0)];
 						var b64data = jsonEncode(JSON.stringify(result));
 						var prefix = "https://atenfyr.github.io/swirl/"
 						if (debug) {
