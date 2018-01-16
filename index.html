@@ -12,8 +12,8 @@
         <meta charset="UTF-8" />
         <title>Swirl</title>
 		<script src="assets/scripts/jquery-3.2.1.min.js"></script>
-        <script src="assets/scripts/phaser.min.js"></script>
-        <script src="assets/scripts/swipe.js"></script>
+		<script src="assets/scripts/phaser.min.js"></script>
+		<script src="assets/scripts/swipe.js"></script>
 		<script src="assets/scripts/cheet.min.js"></script>
 		<script src="assets/scripts/sweetalert2.all.min.js"></script>
 		<style>
@@ -51,7 +51,7 @@
 				let spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
 				let dieSound = false;
 
-				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload: preload, create: create, update: update, render: render});
+				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
 				
 				function goodBoi() {
 					if (buildingMode) {
@@ -62,7 +62,7 @@
 				
 				/*
 					note: track names can't contain o, c, b, d, p, or g, or else save files which were saved
-					with them on will not load (bad design i know)
+					with them on will not load (bad design i know, music was an afterthought)
 				*/
 				function setTrack(key) {
 					if (music) {
@@ -83,7 +83,7 @@
 					return Math.round(100*x)/100;
 				}
 				
-				// altered from https://phaser.io/examples/v2/p2-physics/accelerate-to-object
+				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
 				function moveTowards(obj1, obj2, speed) {
 					if (obj1.body && obj2.body) {
 						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
@@ -127,8 +127,8 @@
 					}
 				}
 				
-				function lhc() {
-					hole = game.add.sprite(player.x, player.y, 'blackhole');
+				function lhc(atx, aty) {
+					hole = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
 					hole.name = 'hole';
 					hole.scale.setTo(0.055, 0.055);
 					game.physics.p2.enable(hole, debug);
@@ -211,6 +211,87 @@
 				function onAll(array, func) {
 					for (var i in array) {
 						func(array[i]);
+					}
+				}
+
+				function resetCanvas() {
+					player.kill();
+					player.reset(w/2, h/2);
+					game.camera.reset(w/2, h/2);
+					game.camera.follow(player);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					
+					for (var i in circles) {
+						circles[i].destroy();
+					}
+					for (var i in obstacles) {
+						obstacles[i].destroy();
+					}
+					for (var i in cats) {
+						cats[i].destroy();
+					}
+					for (var i in holes) {
+						holes[i].destroy();
+					}
+					obstacles = [];
+					circles = [];
+					cats = [];
+					holes = [];
+					friction = ((debug)?8:4);
+				}
+				
+				function resetPlayer() {
+					player.kill();
+					player.reset(w/2, h/2);
+					game.camera.reset(w/2, h/2);
+					game.camera.follow(player);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+				}
+
+				function stopMusic() {
+					if (music) {
+						music.stop();
+					}
+					music = null;
+					currentTrack = null;
+				}
+
+				function addNew(type, atx, aty) {
+					atx = atx || player.x;
+					aty = aty || player.y;
+					switch(type) {
+						case 'circle':
+						case 'ball':
+							circle = game.add.sprite(atx, aty, 'circle');
+							circle.name = 'circle';
+							game.physics.p2.enable(circle, debug);
+							circle.anchor.setTo(0.5, 0.5);
+							circle.body.setCircle(circle.width/2);
+							circles.push(circle);
+							break;
+						case 'box':
+						case 'square':
+						case 'rectangle':
+						case 'triangle': // this is because boxes used to be triangles
+						case 'obstacle':
+							obstacle = game.add.sprite(atx, aty, 'box');
+							obstacle.name = 'obstacle';
+							game.physics.p2.enable(obstacle, debug);
+							obstacle.body.kinematic = true;
+							obstacles.push(obstacle);
+							break;
+						case 'cat':
+						case 'kitten':
+							cat = game.add.sprite(atx, aty, 'cat');
+							cat.name = 'cat';
+							cat.scale.setTo(0.4, 0.4);
+							game.physics.p2.enable(cat, debug);
+							cats.push(cat);
+							break;
+						case 'hole':
+						case 'blackhole':
+							lhc(atx, aty);
+							break;
 					}
 				}
 				
@@ -637,35 +718,9 @@
 					} else if (keylist.speed4.isDown) {
 						player.body.velocity.x += 20;
 					} else if (keylist.reset.isDown) {
-						player.kill();
-						player.reset(w/2, h/2);
-						game.camera.reset(w/2, h/2);
-						game.camera.follow(player);
-						game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
-						
-						for (var i in circles) {
-							circles[i].destroy();
-						}
-						for (var i in obstacles) {
-							obstacles[i].destroy();
-						}
-						for (var i in cats) {
-							cats[i].destroy();
-						}
-						for (var i in holes) {
-							holes[i].destroy();
-						}
-						obstacles = [];
-						circles = [];
-						cats = [];
-						holes = [];
-						friction = ((debug)?8:4);
+						resetCanvas();
 					} else if (keylist.preset.isDown) {
-						player.kill();
-						player.reset(w/2, h/2);
-						game.camera.reset(w/2, h/2);
-						game.camera.follow(player);
-						game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+						resetPlayer();
 					}
 					
 					if (keylist.run.justDown) {
