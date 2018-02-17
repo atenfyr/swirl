@@ -6,7 +6,8 @@
 		Phaser: https://phaser.io/
 		cheet.js: http://lou.wtf/cheet.js/
 		phaser-swipe: https://github.com/flogvit/phaser-swipe
-		SweetAlert2: https://limonte.github.io/sweetalert2/
+        SweetAlert2: https://limonte.github.io/sweetalert2/
+        Logger.js: http://www.songho.ca/misc/logger/logger.html
 	-->
     <head>
         <meta charset="UTF-8" />
@@ -15,7 +16,8 @@
 		<script src="assets/scripts/phaser.min.js"></script>
 		<script src="assets/scripts/swipe.js"></script>
 		<script src="assets/scripts/cheet.min.js"></script>
-		<script src="assets/scripts/sweetalert2.all.min.js"></script>
+        <script src="assets/scripts/sweetalert2.all.min.js"></script>
+        <script src="assets/scripts/logger.js"></script>
 		<style>
 			body, #game {
 				margin: 0 auto;
@@ -41,7 +43,7 @@
 				let circles = [];
 				let cats = [];
 				let holes = [];
-				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio;
+				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData;
 				
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -53,9 +55,15 @@
                 
                 let trackList = [
                     'none',
-                    'mii'
+                    'mii',
+                    'game',
                 ]
 
+                Logger.hide();
+                if (debug) {
+                    Logger.show();
+                }
+                
 				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
 				
 				function goodBoi() {
@@ -139,7 +147,8 @@
 					hole.body.kinematic = true;
 					hole.anchor.setTo(0.5, 0.5);
 					hole.body.setCircle(hole.width/1.85);
-					holes.push(hole);
+                    holes.push(hole);
+                    log('Summoned black hole at ' + (atx || player.x) + ', ' + (aty || player.y));
 				}
 				
 				function preload() {
@@ -150,8 +159,9 @@
 					game.load.image('blackhole', 'assets/images/blackhole.png');
 					game.load.image('placeholder', 'assets/images/placeholder.png');
 					
-					game.load.audio('mii', 'assets/audio/mii.mp3');
-					game.load.audio('die', 'assets/audio/die.mp3');
+					game.load.audio('mii', 'assets/audio/music/mii.mp3');
+                    game.load.audio('die', 'assets/audio/die.mp3');
+                    game.load.audio('game', 'assets/audio/game.mp3');
 				}
 				
 				String.prototype.replaceAll = function(search, replacement) {
@@ -180,7 +190,7 @@
 					['{[', 'L'], // (L)eft close
 					['0,0', 'Z'], // two (Z)eros
 					
-					// just switched characters to make sure the URL doesn't encode anything
+					// just switched characters to make sure the URL is valid
 					['[', 'B'], // (B)racket
 					[']', 'C'], // (C)losing bracket
 					['{', 'Y'], // curl(Y) bracket
@@ -192,22 +202,22 @@
 					['.', 'D'], // (D)ecimal
 				];
 					
-				function jsonEncode(text) {
+				function swirlEncode(text) {
 					for (var i in saveLibrary) {
 						text = text.replaceAll(saveLibrary[i][0], saveLibrary[i][1]);
 					}
 					return text;
 				}
 				
-				function jsonDecode(text) {
+				function swirlDecode(text) {
 					if (debug) {
-						console.log("Save file: " + text + "\nLength: " + text.length);
+						log("Save file: " + text + "\nLength: " + text.length);
 					}
 					for (var j in saveLibrary) {
 						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0])
 					}
 					if (debug) {
-						console.log("Decoded save file: " + text + "\nLength: " + text.length);
+						log("Decoded save file: " + text + "\nLength: " + text.length);
 					}
 					return text;
 				}
@@ -262,9 +272,11 @@
 
 				function addNew(type, atx, aty) {
 					atx = atx || player.x;
-					aty = aty || player.y;
+                    aty = aty || player.y;
+                    log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
 					switch(type) {
 						case 'circle':
+                        case 'sphere':
 						case 'ball':
 							circle = game.add.sprite(atx, aty, 'circle');
 							circle.name = 'circle';
@@ -336,7 +348,7 @@
 						}
 						if (Math.abs(spr.body.velocity.x) <= 10) {
 							spr.body.velocity.x = 0;
-						};
+						}
 						
 						if (!noFriction) {
 							if (spr.body.velocity.y > 0) {
@@ -417,7 +429,7 @@
 						setTrack('mii');
 					});
 					cheet('c h a o s', function() {
-						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0MQmiiQM1R";
+						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0M1M1R";
 					});
 					
 					game.camera.follow(player);
@@ -446,7 +458,7 @@
 						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 65, "two fingers: save game", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 115, "this mode is mostly intended for viewing others' creations", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 145, "please open this link on a laptop or desktop to get the full experience", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 145, "please open this link on a laptop or desktop to edit the grid", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.world.setBounds(0, 0, Infinity, Infinity);
 						player.body.x = 50;
 						player.body.y = 250;
@@ -460,7 +472,7 @@
 						var result;
 						var didErr = false;
 						try {
-							result = JSON.parse(jsonDecode(save));
+							result = JSON.parse(swirlDecode(save));
 						} catch(err) {
 							didErr = true;
 						};
@@ -476,13 +488,15 @@
 								game.input.keyboard.start();
 							});
 						} else {
+                            decodedSaveData = JSON.stringify(result);
 							for (var i in result["o"]) {
 								if (result["o"][i]) {
 									obstacle = game.add.sprite(result["o"][i][0], result["o"][i][1], 'box');
 									obstacle.name = 'obstacle';
 									game.physics.p2.enable(obstacle, debug);
 									obstacle.body.kinematic = true;
-									obstacles.push(obstacle);
+                                    obstacles.push(obstacle);
+                                    log('Summoned box at ' + result["o"][i][0] + ', ' + result["o"][i][1]);
 								}
 							}
 							for (var i in result["c"]) {
@@ -492,7 +506,8 @@
 									game.physics.p2.enable(circle, debug);
 									circle.anchor.setTo(0.5, 0.5);
 									circle.body.setCircle(circle.width/2);
-									circles.push(circle);
+                                    circles.push(circle);
+                                    log('Summoned circle at ' + result["c"][i][0] + ', ' + result["c"][i][1]);
 									circle.body.velocity.x = result["c"][i][2];
 									circle.body.velocity.y = result["c"][i][3];
 								}
@@ -503,7 +518,8 @@
 									cat.name = 'cat';
 									cat.scale.setTo(0.4, 0.4);
 									game.physics.p2.enable(cat, debug);
-									cats.push(cat);
+                                    cats.push(cat);
+                                    log('Summoned cat at ' + result["d"][i][0] + ', ' + result["d"][i][1]);
 									cat.body.velocity.x = result["d"][i][2];
 									cat.body.velocity.y = result["d"][i][3];
 									cat.angle = result["d"][i][4];
@@ -522,7 +538,8 @@
 										hole.body.kinematic = true;
 										hole.anchor.setTo(0.5, 0.5);
 										hole.body.setCircle(hole.width/2);
-										holes.push(hole);
+                                        holes.push(hole);
+                                        log('Summoned black hole at ' + result["b"][i][0] + ', ' + result["b"][i][1]);
 									}
 								}
 							}
@@ -549,10 +566,8 @@
 								game.camera.x = result["g"][6];
 								game.camera.y = result["g"][7];
 							}
-							if (result["g"][8]) {
-								setTrack(trackList[result["g"][8]]);
-								dieSound = (result["g"][9] == 1);
-							}
+							setTrack(trackList[result["g"][8]]);
+                            dieSound = (result["g"][9] == 1);
 						}
 					}
 				}
@@ -634,7 +649,8 @@
 						cat.name = 'cat';
 						cat.scale.setTo(0.4, 0.4);
 						game.physics.p2.enable(cat, debug);
-						cats.push(cat);
+                        cats.push(cat);
+                        log('Summoned cat at ' + player.x + ', ' + player.y);
 					} else if (keylist.expand.justDown && extra && !(keylist.expand.ctrlKey)) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
 					} else if (keylist.friction.isDown && extra) {
@@ -676,7 +692,9 @@
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
 						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0)];
-						var b64data = jsonEncode(JSON.stringify(result));
+						var b64data = swirlEncode(JSON.stringify(result));
+                        decodedSaveData = JSON.stringify(result);
+
 						var prefix = "https://atenfyr.github.io/swirl/"
 						if (debug) {
 							prefix = prefix + "?debug&load="
@@ -699,7 +717,8 @@
 						obstacle.name = 'obstacle';
 						game.physics.p2.enable(obstacle, debug);
 						obstacle.body.kinematic = true;
-						obstacles.push(obstacle);
+                        obstacles.push(obstacle);
+                        log('Summoned box at ' + player.x + ', ' + player.y);
 					} else if (keylist.unstuck.isDown) {
 						player.body.x -= 10;
 						player.body.y -= 10;
@@ -713,7 +732,8 @@
 						game.physics.p2.enable(circle, debug);
 						circle.anchor.setTo(0.5, 0.5);
 						circle.body.setCircle(circle.width/2);
-						circles.push(circle);
+                        circles.push(circle);
+                        log('Summoned circle at ' + player.x + ', ' + player.y);
 					} else if (keylist.speed1.isDown) {
 						player.body.velocity.y -= 20;
 					} else if (keylist.speed2.isDown) {
@@ -753,6 +773,7 @@
 									mode = "error";
 								};
 								if (mode == "success") {
+                                    log('Ran code through console: ' + a['value']);
 									swal({
 										title: "you did a good hack",
 										text: resp,
