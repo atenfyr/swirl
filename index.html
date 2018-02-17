@@ -50,6 +50,11 @@
 				let buildingMode = false;
 				let spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
 				let dieSound = false;
+                
+                let trackList = [
+                    'none',
+                    'mii'
+                ]
 
 				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
 				
@@ -60,11 +65,10 @@
 					spinnyBoi = true;
 				}
 				
-				/*
-					note: track names can't contain o, c, b, d, p, or g, or else save files which were saved
-					with them on will not load (bad design i know, music was an afterthought)
-				*/
 				function setTrack(key) {
+                    if (key == 'none' || !key) { 
+                        return; 
+                    }
 					if (music) {
 						music.stop();
 					}
@@ -546,7 +550,7 @@
 								game.camera.y = result["g"][7];
 							}
 							if (result["g"][8]) {
-								setTrack(result["g"][8]);
+								setTrack(trackList[result["g"][8]]);
 								dieSound = (result["g"][9] == 1);
 							}
 						}
@@ -667,10 +671,11 @@
 							}
 						}
 						
-						// p = playerx, playery, playervelocityx, playervelocityy
-						// g = friction, world width, world height, building mode (1 or 0), restitution
+                        let trackNumber = trackList.indexOf(currentTrack);
+                        if (trackNumber == -1) { trackNumber = 0; }
+
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, currentTrack, ((dieSound)?1:0)];
+						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0)];
 						var b64data = jsonEncode(JSON.stringify(result));
 						var prefix = "https://atenfyr.github.io/swirl/"
 						if (debug) {
