@@ -138,19 +138,7 @@
 						}
 					}
 				}
-				
-				function lhc(atx, aty) {
-					hole = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
-					hole.name = 'hole';
-					hole.scale.setTo(0.055, 0.055);
-					game.physics.p2.enable(hole, debug);
-					hole.body.kinematic = true;
-					hole.anchor.setTo(0.5, 0.5);
-					hole.body.setCircle(hole.width/1.85);
-                    holes.push(hole);
-                    log('Summoned black hole at ' + (atx || player.x) + ', ' + (aty || player.y));
-				}
-				
+
 				function preload() {
 					game.load.image('player', 'assets/images/player.png');
 					game.load.image('box', 'assets/images/box.png');
@@ -341,8 +329,15 @@
                                 atx = Math.round(atx/55)*55;
                                 aty = Math.round(player.y/55)*55;
                             }
-							lhc(atx, aty);
-							break;
+                            hole = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
+                            hole.name = 'hole';
+                            hole.scale.setTo(0.055, 0.055);
+                            game.physics.p2.enable(hole, debug);
+                            hole.body.kinematic = true;
+                            hole.anchor.setTo(0.5, 0.5);
+                            hole.body.setCircle(hole.width/1.85);
+                            holes.push(hole);
+                            break;
 					}
                     log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
 				}
@@ -740,7 +735,7 @@
 					}
 					
 					if (keylist.hole.justDown && player.alive) {
-						lhc();
+						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
 						addNew('circle', player.x, player.y, gridLock);
 					} else if (keylist.speed1.isDown) {
