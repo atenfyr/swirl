@@ -784,7 +784,13 @@
                                         game.paused = false;
                                         game.input.keyboard.start();
                                     });
-								}
+								} else {
+                                    game.paused = false;
+                                    game.input.keyboard.start();
+                                }
+                            } else {
+                                game.paused = false;
+                                game.input.keyboard.start();
 							}
 						});
 					}
