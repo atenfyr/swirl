@@ -611,6 +611,7 @@
 							setTrack(trackList[result["g"][8]]);
                             dieSound = (result["g"][9] == 1);
                             gridLock = (result['g'][10] == 1);
+                            player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 						}
 					}
 				}
@@ -701,6 +702,7 @@
 						buildingMode = !(buildingMode);
                     } else if (keylist.gridlock.justDown && !(keylist.gridlock.ctrlKey)) {
                         gridLock = !gridLock;
+                        player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
 						game.paused = true;
 						let result = {};
@@ -739,7 +741,8 @@
                         if (trackNumber == -1) { trackNumber = 0; }
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-						result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                        
 						var b64data = swirlEncode(JSON.stringify(result));
                         decodedSaveData = JSON.stringify(result);
 
