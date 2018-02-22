@@ -167,7 +167,7 @@
 				String.prototype.replaceAll = function(search, replacement) {
 					var target = this;
 					return target.replace(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g'), replacement);
-				};
+				}
 				
 				// the key used to decode and encode save data
 				// the first one specified in each array is the one to replace, and the second one is the one to replace it with
@@ -462,7 +462,7 @@
 						game.world.setBounds(0, 0, Infinity, Infinity);
 						player.body.x = 50;
 						player.body.y = 250;
-					};
+					}
 					
 					game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
 					game.scale.fullScreenScaleMode = Phaser.ScaleManager.RESIZE;
@@ -475,7 +475,7 @@
 							result = JSON.parse(swirlDecode(save));
 						} catch(err) {
 							didErr = true;
-						};
+						}
 						if (didErr || !result || (!(result["o"]))) {
 							game.paused = true;
 							game.input.keyboard.stop();
@@ -556,7 +556,7 @@
 								} else {
 									game.world.setBounds(0, 0, result["g"][1], result["g"][2]);
 								}
-							};
+							}
 							buildingMode = (result["g"][3] == 1);
 							if (result["g"][4]) {
 								game.physics.p2.restitution = result["g"][4];
@@ -575,7 +575,7 @@
 				function update() {
 					if (holes.length > 0) {
 						game.world.forEachAlive(moveToHole, this);
-					};
+					}
 					
 					if (player.body == null) {
 						player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
@@ -583,7 +583,7 @@
 						game.physics.p2.enable(player, debug);
 						game.physics.p2.restitution = 1.5;
 						player.kill();
-					};
+					}
 					
 					player.body.angularVelocity = 8;
 					game.world.forEachExists(frictionCheck, this);
@@ -766,12 +766,12 @@
 								var mode = "success";
 								if (a["value"].charAt(a["value"].length-1) == ";") {
 									a["value"] = a["value"].substring(0, a["value"].length-1);
-								};
+								}
 								try {
 									resp = eval('(' + a["value"] + ')');
 								} catch(err) {
 									mode = "error";
-								};
+								}
 								if (mode == "success") {
                                     log('Ran code through console: ' + a['value']);
 									swal({
