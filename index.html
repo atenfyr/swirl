@@ -543,7 +543,14 @@
 							}
                             for (var i in result["b"]) {
                                 if (result["b"][i]) {
-                                    addNew('hole', result['b'][i][0], result['b'][i][1], false);
+                                    hole = game.add.sprite(result['b'][i][0], result['b'][i][1], 'blackhole');
+                                    hole.name = 'hole';
+                                    hole.scale.setTo(result['b'][i][2], result['b'][i][3]);
+                                    game.physics.p2.enable(hole, debug);
+                                    hole.body.kinematic = true;
+                                    hole.anchor.setTo(0.5, 0.5);
+                                    hole.body.setCircle(hole.width/1.85);
+                                    holes.push(hole);
                                 }
                             }
                             if (result['i']) {
