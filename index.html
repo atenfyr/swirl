@@ -103,11 +103,13 @@
 				}
 				
 				function moveToHole(obj) {
-					if (((obj["name"] != 'player') || spinnyBoi) && (obj['name'] != 'object')) {
+					if ((obj["name"] != 'player') || spinnyBoi) {
 						if (obj.body) {
 							for (var i in holes) {
 								if ((holes[i] != obj) && holes[i].alive) {
-									moveTowards(obj, holes[i], (holes[i].width/15)+19);
+                                    if (obj['name'] != 'object') {
+									    moveTowards(obj, holes[i], (holes[i].width/15)+19);
+                                    }
 									if ((Phaser.Math.distance(holes[i].x, holes[i].y, obj.x, obj.y) <= (10+(holes[i].width*0.75)+obj.offsetX))) {
 										if (dieSound) {
 											dieAudio.play('', 0, 1);
