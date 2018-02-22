@@ -8,6 +8,7 @@
 		phaser-swipe: https://github.com/flogvit/phaser-swipe
         SweetAlert2: https://limonte.github.io/sweetalert2/
         Logger.js: http://www.songho.ca/misc/logger/logger.html
+        spin.js: http://spin.js.org/
 	-->
     <head>
         <meta charset="UTF-8" />
@@ -19,7 +20,7 @@
         <script src="assets/scripts/sweetalert2.all.min.js"></script>
         <script src="assets/scripts/logger.js"></script>
 		<style>
-			body, #game {
+			body, .game {
 				margin: 0 auto;
 				padding: 0 auto;
 				width: 100%;
@@ -28,11 +29,34 @@
 				overflow: hidden;
 				background-color: #000000;
 			}
+
+            .game {
+                border: 16px solid #666666;
+                border-top: 16px solid #ffffff;
+                border-radius: 20%;
+                width: 120px;
+                height: 120px;
+                animation: zoop 2s linear infinite;
+                top: 50%;
+                left: 50%;
+                margin-top: -60px;
+                margin-left: -60px;
+                background-color: #444444;
+            }
+
+            @keyframes zoop {
+                0% {
+                    transform: rotate(0deg); 
+                }
+                100% {
+                    transform: rotate(360deg); 
+                }
+            }
 		</style>
     </head>
     <body>
-		<div id='game'></div>
-		<script type="text/javascript">
+		<div class='game'></div>
+        <script type="text/javascript">
 			window.onload = function() {
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
@@ -63,7 +87,8 @@
                 }
                 
 				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
-				
+                $('.game').hide();
+                
 				function goodBoi() {
 					if (buildingMode) {
 						buildingMode = false;
