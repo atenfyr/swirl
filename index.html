@@ -465,6 +465,10 @@
 						dieSound = !dieSound;
 						dieAudio.play('', 0, 1);
 					});
+                    cheet('d e b u g', function() {
+                        game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
+					    game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
+                    })
 					cheet('m i i', function() {
 						setTrack('mii');
 					});
@@ -504,8 +508,8 @@
 						player.body.y = 250;
 					}
 					
-					game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
-					game.scale.fullScreenScaleMode = Phaser.ScaleManager.RESIZE;
+					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
+					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.parentIsWindow = true;
 					
 					if (save) {
