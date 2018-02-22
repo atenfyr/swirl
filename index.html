@@ -43,15 +43,13 @@
 				let circles = [];
 				let cats = [];
 				let holes = [];
+                let objects = []; // immovable objects
 				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData;
 				
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
 				let friction = ((debug)?8:4);
-				let extra = true;
-				let buildingMode = false;
-				let spinnyBoi = false; // make black holes teleport whoever they suck in (and suck in players too)
-				let dieSound = false;
+				let buildingMode, spinnyBoi, dieSound, gridLock = false;
                 
                 let trackList = [
                     'none',
@@ -105,7 +103,7 @@
 				}
 				
 				function moveToHole(obj) {
-					if ((obj["name"] != "player") || spinnyBoi) {
+					if (((obj["name"] != 'player') || spinnyBoi) && (obj['name'] != 'object')) {
 						if (obj.body) {
 							for (var i in holes) {
 								if ((holes[i] != obj) && holes[i].alive) {
@@ -157,7 +155,7 @@
 					game.load.image('circle', 'assets/images/circle.png');
 					game.load.image('cat', 'assets/images/cat.png');
 					game.load.image('blackhole', 'assets/images/blackhole.png');
-					game.load.image('placeholder', 'assets/images/placeholder.png');
+					game.load.image('immovable', 'assets/images/immovable.png');
 					
 					game.load.audio('mii', 'assets/audio/music/mii.mp3');
                     game.load.audio('die', 'assets/audio/die.mp3');
@@ -178,6 +176,7 @@
 					['"c":', 'c'], // (c)ircles
 					['"b":', 'b'], // (b)lack holes
 					['"d":', 'd'], // cats, c was taken so next letter (d)
+                    ['"i":', 'i'], // (i)mmovable objects
 					['"p":', 'p'], // (p)layer
 					['"g":', 'g'], // (g)eneral
 					
@@ -247,10 +246,14 @@
 					for (var i in holes) {
 						holes[i].destroy();
 					}
+					for (var i in objects) {
+						objects[i].destroy();
+					}
 					obstacles = [];
 					circles = [];
 					cats = [];
 					holes = [];
+                    objects = [];
 					friction = ((debug)?8:4);
 				}
 				
@@ -270,14 +273,17 @@
 					currentTrack = null;
 				}
 
-				function addNew(type, atx, aty) {
+				function addNew(type, atx, aty, lockOntoGrid) {
 					atx = atx || player.x;
                     aty = aty || player.y;
-                    log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
 					switch(type) {
 						case 'circle':
                         case 'sphere':
 						case 'ball':
+                            if (lockOntoGrid) {
+                                atx = Math.round(atx/35)*35;
+                                aty = Math.round(player.y/35)*35;
+                            }
 							circle = game.add.sprite(atx, aty, 'circle');
 							circle.name = 'circle';
 							game.physics.p2.enable(circle, debug);
@@ -290,6 +296,10 @@
 						case 'rectangle':
 						case 'triangle': // this is because boxes used to be triangles
 						case 'obstacle':
+                            if (lockOntoGrid) {
+                                atx = Math.round(atx/40)*40;
+                                aty = Math.round(player.y/40)*40;
+                            }
 							obstacle = game.add.sprite(atx, aty, 'box');
 							obstacle.name = 'obstacle';
 							game.physics.p2.enable(obstacle, debug);
@@ -298,21 +308,51 @@
 							break;
 						case 'cat':
 						case 'kitten':
+                            if (lockOntoGrid) {
+                                atx = Math.round(atx/100)*100;
+                                aty = Math.round(player.y/100)*100;
+                            }
 							cat = game.add.sprite(atx, aty, 'cat');
 							cat.name = 'cat';
 							cat.scale.setTo(0.4, 0.4);
 							game.physics.p2.enable(cat, debug);
 							cats.push(cat);
 							break;
+                            case 'box':
+						case 'immovable':
+						case 'object':
+                        case 'immovable object':
+                            if (lockOntoGrid) {
+                                atx = Math.round(atx/40)*40;
+                                aty = Math.round(player.y/40)*40;
+                            }
+							object = game.add.sprite(atx, aty, 'immovable');
+							object.name = 'object';
+							game.physics.p2.enable(object, debug);
+							object.body.kinematic = true;
+							objects.push(object);
+							break;
 						case 'hole':
 						case 'blackhole':
+                        case 'black hole':ActiveXObject
+                            if (lockOntoGrid) {
+                                atx = Math.round(atx/55)*55;
+                                aty = Math.round(player.y/55)*55;
+                            }
 							lhc(atx, aty);
 							break;
 					}
+                    log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
 				}
 				
 				function frictionCheck(spr, noFriction) {
 					if (spr.body) {
+                        if (spr['name'] == 'object') {
+                            spr.body.velocity.x = 0;
+						    spr.body.velocity.y = 0;
+                            spr.body.angularVelocity = 0;
+                            return;
+                        }
 						if (spr.anchor) {
 							spr.anchor.setTo(0.5, 0.5);
 						}
@@ -415,7 +455,7 @@
 					
 					game.physics.p2.restitution = 1.5;
 
-					keylist = game.input.keyboard.addKeys({ 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
+					keylist = game.input.keyboard.addKeys({ 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
@@ -434,7 +474,7 @@
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
-					
+
 					if (!mobile) {
 						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont).sendToBack();
 						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont).sendToBack();
@@ -442,17 +482,17 @@
 						game.add.text(5, 65, "E: summons a ball", defaultFont).sendToBack();
 						game.add.text(5, 85, "R: resets the canvas", defaultFont).sendToBack();
 						
-						if (extra) {
-							game.add.text(5, 115, "C: summons a cat", defaultFont).sendToBack();
-							game.add.text(5, 135, "X: summons a black hole", defaultFont).sendToBack();
-							game.add.text(5, 155, "P: remove world borders", defaultFont).sendToBack();
-							game.add.text(5, 175, "F: increases friction", defaultFont).sendToBack();
-							game.add.text(5, 195, "G: decreases friction", defaultFont).sendToBack();
-							game.add.text(5, 215, "T: toggle building mode", defaultFont).sendToBack();
-							game.add.text(5, 235, "U: save current game state", defaultFont).sendToBack();
-							game.add.text(5, 255, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
-							game.add.text(5, 275, "Y: reset the tiny square", defaultFont).sendToBack();
-						}
+                        game.add.text(5, 115, "C: summons a cat", defaultFont).sendToBack();
+                        game.add.text(5, 135, "X: summons a black hole", defaultFont).sendToBack();
+                        game.add.text(5, 155, "Z: summons an immovable object", defaultFont).sendToBack();
+                        game.add.text(5, 175, "P: remove world borders", defaultFont).sendToBack();
+                        game.add.text(5, 195, "F: increases friction", defaultFont).sendToBack();
+                        game.add.text(5, 215, "G: decreases friction", defaultFont).sendToBack();
+                        game.add.text(5, 235, "T: toggle building mode", defaultFont).sendToBack();
+                        game.add.text(5, 255, "V: lock objects to grid", defaultFont).sendToBack();
+                        game.add.text(5, 275, "U: save current game state", defaultFont).sendToBack();
+                        game.add.text(5, 295, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
+                        game.add.text(5, 315, "Y: reset the tiny square", defaultFont).sendToBack();
 					} else {
 						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
@@ -491,58 +531,31 @@
                             decodedSaveData = JSON.stringify(result);
 							for (var i in result["o"]) {
 								if (result["o"][i]) {
-									obstacle = game.add.sprite(result["o"][i][0], result["o"][i][1], 'box');
-									obstacle.name = 'obstacle';
-									game.physics.p2.enable(obstacle, debug);
-									obstacle.body.kinematic = true;
-                                    obstacles.push(obstacle);
-                                    log('Summoned box at ' + result["o"][i][0] + ', ' + result["o"][i][1]);
+                                    addNew('box', result['o'][i][0], result['o'][i][1], false);
 								}
 							}
 							for (var i in result["c"]) {
 								if (result["c"][i]) {
-									circle = game.add.sprite(result["c"][i][0], result["c"][i][1], 'circle');
-									circle.name = 'circle';
-									game.physics.p2.enable(circle, debug);
-									circle.anchor.setTo(0.5, 0.5);
-									circle.body.setCircle(circle.width/2);
-                                    circles.push(circle);
-                                    log('Summoned circle at ' + result["c"][i][0] + ', ' + result["c"][i][1]);
-									circle.body.velocity.x = result["c"][i][2];
-									circle.body.velocity.y = result["c"][i][3];
+                                    addNew('circle', result['c'][i][0], result['c'][i][1], false);
 								}
 							}
 							for (var i in result["d"]) {
 								if (result["d"][i]) {
-									cat = game.add.sprite(result["d"][i][0], result["d"][i][1], 'cat');
-									cat.name = 'cat';
-									cat.scale.setTo(0.4, 0.4);
-									game.physics.p2.enable(cat, debug);
-                                    cats.push(cat);
-                                    log('Summoned cat at ' + result["d"][i][0] + ', ' + result["d"][i][1]);
-									cat.body.velocity.x = result["d"][i][2];
-									cat.body.velocity.y = result["d"][i][3];
-									cat.angle = result["d"][i][4];
-									cat.body.angularVelocity = result["d"][i][5];
+                                    addNew('cat', result['d'][i][0], result['d'][i][1], false);
 								}
 							}
-							if (result["b"]) {
-								for (var i in result["b"]) {
-									if (result["b"][i]) {
-										hole = game.add.sprite(result["b"][i][0], result["b"][i][1], 'blackhole');
-										hole.name = 'hole';
-										if (result["b"][i][2]) {
-											hole.scale.setTo(result["b"][i][2], result["b"][i][3]);
-										}
-										game.physics.p2.enable(hole, debug);
-										hole.body.kinematic = true;
-										hole.anchor.setTo(0.5, 0.5);
-										hole.body.setCircle(hole.width/2);
-                                        holes.push(hole);
-                                        log('Summoned black hole at ' + result["b"][i][0] + ', ' + result["b"][i][1]);
-									}
-								}
-							}
+                            for (var i in result["b"]) {
+                                if (result["b"][i]) {
+                                    addNew('hole', result['b'][i][0], result['b'][i][1], false);
+                                }
+                            }
+                            if (result['i']) {
+                                for (var i in result['i']) {
+                                    if (result['i'][i]) {
+                                        addNew('immovable object', result['i'][i][0], result['i'][i][1], false);
+                                    }
+							    }
+                            }
 							// p = playerx, playery, playervelocityx, playervelocityy
 							// g = friction, world width, world height, building mode (1 or 0), restitution
 							player.body.x = result["p"][0];
@@ -644,21 +657,20 @@
 						player.body.moveRight(((buildingMode)?250:350));
 					}
 					
-					if (keylist.easter.justDown && extra && !(keylist.easter.ctrlKey)) {
-						cat = game.add.sprite(player.x, player.y, 'cat');
-						cat.name = 'cat';
-						cat.scale.setTo(0.4, 0.4);
-						game.physics.p2.enable(cat, debug);
-                        cats.push(cat);
-                        log('Summoned cat at ' + player.x + ', ' + player.y);
-					} else if (keylist.expand.justDown && extra && !(keylist.expand.ctrlKey)) {
+					if (keylist.easter.justDown && !(keylist.easter.ctrlKey)) {
+						addNew('cat', player.x, player.y, gridLock);
+                    } else if (keylist.object.justDown && !(keylist.object.ctrlKey)) {
+                        addNew('immovable object', player.x, player.y, gridLock);
+					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey)) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-					} else if (keylist.friction.isDown && extra) {
+					} else if (keylist.friction.isDown) {
 						friction++;
-					} else if (keylist.friction2.isDown && extra) {
+					} else if (keylist.friction2.isDown) {
 						friction--;
 					} else if (keylist.toggle.justDown) {
 						buildingMode = !(buildingMode);
+                    } else if (keylist.gridlock.justDown && !(keylist.gridlock.ctrlKey)) {
+                        gridLock = !gridLock;
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
 						game.paused = true;
 						let result = {};
@@ -684,6 +696,12 @@
 						for (var i in holes) {
 							if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
 								result["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
+							}
+						}
+						result['i'] = [];
+						for (var i in objects) {
+							if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
+								result['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y)]);
 							}
 						}
 						
@@ -713,12 +731,7 @@
 					}
 					
 					if (keylist.move.justDown && player.alive) {
-						obstacle = game.add.sprite(player.x, player.y, 'box');
-						obstacle.name = 'obstacle';
-						game.physics.p2.enable(obstacle, debug);
-						obstacle.body.kinematic = true;
-                        obstacles.push(obstacle);
-                        log('Summoned box at ' + player.x + ', ' + player.y);
+						addNew('box', player.x, player.y, gridLock);
 					} else if (keylist.unstuck.isDown) {
 						player.body.x -= 10;
 						player.body.y -= 10;
@@ -727,13 +740,7 @@
 					if (keylist.hole.justDown && player.alive) {
 						lhc();
 					} else if (keylist.move2.justDown && player.alive) {
-						circle = game.add.sprite(player.x, player.y, 'circle');
-						circle.name = 'circle';
-						game.physics.p2.enable(circle, debug);
-						circle.anchor.setTo(0.5, 0.5);
-						circle.body.setCircle(circle.width/2);
-                        circles.push(circle);
-                        log('Summoned circle at ' + player.x + ', ' + player.y);
+						addNew('circle', player.x, player.y, gridLock);
 					} else if (keylist.speed1.isDown) {
 						player.body.velocity.y -= 20;
 					} else if (keylist.speed2.isDown) {
