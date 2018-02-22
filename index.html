@@ -763,8 +763,6 @@
 							confirmButtonText: 'hack',
 							cancelButtonText: 'cancel'
 						}).then((a) => {
-							game.paused = false;
-							game.input.keyboard.start();
 							if (a["value"]) {
 								var resp;
 								var mode = "success";
@@ -780,9 +778,12 @@
                                     log('Ran code through console: ' + a['value']);
 									swal({
 										title: "you did a good hack",
-										text: resp,
+										html: '<textarea readonly=true rows="3" cols="40">' + resp + '</textarea>',
 										type: mode
-									});
+									}).then(() => {
+                                        game.paused = false;
+                                        game.input.keyboard.start();
+                                    });
 								}
 							}
 						});
