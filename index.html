@@ -237,9 +237,52 @@
 				}
 				
 				function onAll(array, func) {
-					for (var i in array) {
-						func(array[i]);
-					}
+                    if (typeof(array) == 'object') {
+                        for (var i in array) {
+                            func(array[i]);
+                        }
+                    } else if (typeof(array) == 'string') {
+                        switch(array.replace(/s$/, "")) {
+                            case 'circle':
+                            case 'sphere':
+						    case 'ball':
+                                array = circles;
+							    break;
+                            case 'box':
+                            case 'square':
+                            case 'rectangle':
+                            case 'triangle': // this is because boxes used to be triangles
+                            case 'obstacle':
+                                array = obstacles;
+							    break;
+						    case 'cat':
+						    case 'kitten':
+                                array = cats;
+							    break;
+						    case 'immovable':
+						    case 'object':
+                            case 'immovable object':
+                                array = objects;
+							    break;
+						    case 'hole':
+						    case 'blackhole':
+                            case 'black hole':
+                                array = holes;
+                                break;
+                            case 'player':
+                                array = [player];
+                                break;
+                            default:
+                                array = [];
+                                game.world.forEachExists(func, this);
+                                break;
+                        }
+                        for (var i in array) {
+                            func(array[i]);
+                        }
+                    } else if (typeof(array) == 'function') {
+                        game.world.forEachExists(array, this);
+                    }
 				}
 
 				function resetCanvas() {
@@ -333,7 +376,6 @@
 							game.physics.p2.enable(cat, debug);
 							cats.push(cat);
 							break;
-                            case 'box':
 						case 'immovable':
 						case 'object':
                         case 'immovable object':
