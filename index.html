@@ -393,7 +393,7 @@
                                 aty = Math.round(player.y/40)*40;
                             }
 							lastAction = game.add.sprite(atx, aty, 'immovable');
-							lastActionname = 'object';
+							lastAction.name = 'object';
 							game.physics.p2.enable(lastAction, debug);
 							lastAction.body.kinematic = true;
 							objects.push(lastAction);
