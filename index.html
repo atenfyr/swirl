@@ -661,6 +661,7 @@
                         isChasing = true;
                         buildingMode = false;
                         dieSound = false;
+                        friction = 4;
                         if (music) {
                             music.stop();
                         }
@@ -825,17 +826,17 @@
                         onAll(function(obj) {
                             if (obj.name == 'dangerous') {
                                 onAll('black holes', function(hole) {
-                                    if ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (10+(hole.width*0.75)+obj.offsetX))) {
-                                        if (game.rnd.integerInRange(1, 200) == 100) {
-                                            obj.destroy();
-                                        } else if (game.rnd.integerInRange(1, 75) == 25) {
+                                    if ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (3+(hole.width*0.75)+obj.offsetX))) {
+                                        if (game.rnd.integerInRange(1, 10) >= 7) {
                                             hole.destroy();
+                                        } else {
+                                            obj.destroy();
                                         }
                                     }
                                 });
                             }
                         });
-                        if (game.rnd.integerInRange(1, 110-(countdown.seconds/2)) == 1) {
+                        if (game.rnd.integerInRange(1, 230-(countdown.seconds*1.5)) == 1) {
                             addNew('random', game.world.randomX, game.world.randomY, false, true);
                             lastAction.tint = 0xFF0000;
                             lastAction.name = 'dangerous';
@@ -913,9 +914,9 @@
 						game.world.forEachExists(moveTowards, this, player, 25);
 					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey)) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-					} else if (keylist.friction.isDown) {
+					} else if (keylist.friction.isDown && !isChasing) {
 						friction++;
-					} else if (keylist.friction2.isDown) {
+					} else if (keylist.friction2.isDown && !isChasing) {
 						friction--;
 					} else if (keylist.toggle.justDown && !isChasing) {
 						buildingMode = !(buildingMode);
