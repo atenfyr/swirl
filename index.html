@@ -133,6 +133,10 @@
 
                 function checkIfNear(obj) {
                     if (obj.name == 'dangerous' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+                        obj.destroy();
+                        if (game.rnd.integerInRange(1, 5) == 1) {
+                            return;
+                        }
                         new Audio('assets/audio/beep.mp3').play();
                         if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
                             livesText.destroy();
@@ -669,8 +673,8 @@
                             }
                         });
                         lives = 5;
-                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"}).sendToBack();
-                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#FFFFFF"}).sendToBack();
+                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
+                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#FFFFFF"}).bringToTop();
                         countdown.start();
                         textGroup.visible = false;
                         game.add.audio('glass').play('', 0, 0.75);
@@ -816,19 +820,24 @@
 					
 					player.body.angularVelocity = 8;
 					game.world.forEachExists(frictionCheck, this);
+
                     if (isChasing) {
                         game.world.forEachExists(moveTowards, this, player, 25, true);
                         game.world.forEachExists(checkIfNear, this);
                         onAll(function(obj) {
                             if (obj.name == 'dangerous') {
                                 onAll('black holes', function(hole) {
-                                    if (game.rnd.integerInRange(1, 200) == 10 && ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (10+(hole.width*0.75)+obj.offsetX)))) {
-                                        obj.destroy();
+                                    if ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (10+(hole.width*0.75)+obj.offsetX))) {
+                                        if (game.rnd.integerInRange(1, 200) == 100) {
+                                            obj.destroy();
+                                        } else if (game.rnd.integerInRange(1, 75) == 25) {
+                                            hole.destroy();
+                                        }
                                     }
                                 });
                             }
                         });
-                        if (game.rnd.integerInRange(1, 100) == 50) {
+                        if (game.rnd.integerInRange(1, 110-(countdown.seconds/2)) == 1) {
                             addNew('random', game.world.randomX, game.world.randomY, false, true);
                             lastAction.tint = 0xFF0000;
                             lastAction.name = 'dangerous';
