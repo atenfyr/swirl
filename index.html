@@ -132,12 +132,9 @@
 					}
 				}
 
-                function checkIfNear(obj) {
+                function isChasingLoop(obj) {
                     if (obj.name == 'dangerous' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.destroy();
-                        if (game.rnd.integerInRange(1, 5) == 1) {
-                            return;
-                        }
                         new Audio('assets/audio/beep.mp3').play();
                         if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
                             livesText.setText('0 lives remaining');
@@ -674,7 +671,8 @@
                             if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
                                 sprite.tint = 0xFF0000;
                                 sprite.name = 'dangerous';
-                                sprite.body.kinematic = false;
+                                sprite.body.dynamic = true;
+                                game.physics.p2.enable(sprite, debug);
                             }
                         });
                         lives = 5;
@@ -829,22 +827,22 @@
 
                     if (isChasing) {
                         game.world.forEachExists(moveTowards, this, player, 25, true);
-                        game.world.forEachExists(checkIfNear, this);
+                        game.world.forEachExists(isChasingLoop, this);
                         onAll('black holes', function(hole) {
-                            if (actions.length >= 0) {
+                            if (actions.length >= 0 && hole.visible && hole.exists) {
                                 let randomAction = actions[game.rnd.integerInRange(0, actions.length-1)];
-                                if (randomAction.body && (Phaser.Math.distance(randomAction.x, randomAction.y, hole.x, hole.y) <= 300) && !lines[randomAction] && randomAction.exists && randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 30) == 1) {
+                                if (randomAction.body && (Phaser.Math.distance(randomAction.x, randomAction.y, hole.x, hole.y) <= 300) && !lines[randomAction] && randomAction.exists && randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 20) == 1) {
                                     graphics = game.add.graphics(0, 0);
                                     graphics.lineStyle(3, 0xFFFF00, 1);
                                     graphics.moveTo(hole.x, hole.y);
-                                    lines[randomAction] = graphics.lineTo(randomAction.x-5, randomAction.y-5);
+                                    lines[randomAction] = graphics.lineTo(randomAction.x, randomAction.y);
                                     graphics.endFill();
 
                                     randomAction.name = 'safe';
                                     randomAction.body.kinematic = true;
                                     randomAction.body.velocity.x = 0;
                                     randomAction.body.velocity.y = 0;
-                                    randomAction.body.angularVelocity = 0;
+                                    randomAction.body.angularVelocity = 10;
                                     setTimeout(function() {
                                         if (lines[randomAction]) {
                                             lines[randomAction].destroy();
@@ -873,10 +871,15 @@
                             spawnrate = 100;
                         }
                         if (game.rnd.integerInRange(1, spawnrate) == 1) {
-                            addNew('random', game.world.randomX, game.world.randomY, false, true);
-                            lastAction.tint = 0xFF0000;
-                            lastAction.name = 'dangerous';
-                            lastAction.body.kinematic = false;
+                            let newX = game.world.randomX;
+                            let newY = game.world.randomY;
+                            if ((Phaser.Math.distance(newX, newY, player.x, player.y) >= 300)) {
+                                addNew('random', newX, newY, false, true);
+                                lastAction.tint = 0xFF0000;
+                                lastAction.name = 'dangerous';
+                                lastAction.body.dynamic = true;
+                                game.physics.p2.enable(lastAction, debug);
+                            }
                         }
                     }
 					
@@ -1022,7 +1025,7 @@
 					
 					if (keylist.move.justDown && player.alive) {
 						addNew('box', player.x, player.y, gridLock);
-					} else if (keylist.unstuck.isDown) {
+					} else if (keylist.unstuck.isDown && !isChasing) {
 						player.body.x -= 10;
 						player.body.y -= 10;
 					}
