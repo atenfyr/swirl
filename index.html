@@ -74,7 +74,7 @@
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
 				let friction = ((debug)?8:4);
-				let buildingMode, spinnyBoi, dieSound, gridLock = false;
+				let buildingMode, spinnyBoi, isChasing, dieSound, gridLock = false;
                 
                 let trackList = [
                     'none',
@@ -121,7 +121,7 @@
 				
 				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
 				function moveTowards(obj1, obj2, speed) {
-                    if (obj1 == obj2) {
+                    if (obj1 == obj2 || obj1.name == 'object') {
                         return;
                     }
 					if (obj1.body && obj2.body) {
@@ -130,6 +130,15 @@
 						obj1.body.velocity.y = (Math.sin(angle)*speed)+obj1.body.velocity.y;
 					}
 				}
+
+                function checkIfNear(obj) {
+                    if (obj.name == 'circle' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (10+(obj.width*0.75)+player.offsetX))) {
+                        game.paused = true;
+						game.input.keyboard.stop();
+                        new Audio('assets/audio/beep.mp3').play();
+                        return;
+                    }
+                }
 				
 				function moveToHole(obj) {
 					if ((obj["name"] != 'player') || spinnyBoi) {
@@ -179,6 +188,7 @@
 					game.load.audio('mii', 'assets/audio/music/mii.mp3');
                     game.load.audio('die', 'assets/audio/die.mp3');
                     game.load.audio('game', 'assets/audio/game.mp3');
+                    game.load.audio('glass', 'assets/audio/glass.mp3');
 				}
 				
 				String.prototype.replaceAll = function(search, replacement) {
@@ -289,12 +299,14 @@
                     }
 				}
 
-				function resetCanvas() {
-					player.kill();
-					player.reset(w/2, h/2);
-					game.camera.reset(w/2, h/2);
-					game.camera.follow(player);
-					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+				function resetCanvas(dontResetPlayer) {
+                    if (!dontResetPlayer) {
+                        player.kill();
+                        player.reset(w/2, h/2);
+                        game.camera.reset(w/2, h/2);
+                        game.camera.follow(player);
+                        game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+                    }
 					
 					for (var i in circles) {
 						circles[i].destroy();
@@ -546,6 +558,12 @@
 					cheet('c h a o s', function() {
 						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0M1M1R";
 					});
+                    cheet('w a s d ↑ ← ↓ →', function() {
+                        game.world.setBounds(0, 0, w+1, h+1);
+                        isChasing = true;
+                        buildingMode = false;
+                        game.add.audio('glass').play('', 0, 0.75, true);
+                    });
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
@@ -685,6 +703,14 @@
 					
 					player.body.angularVelocity = 8;
 					game.world.forEachExists(frictionCheck, this);
+                    if (isChasing) {
+                        game.world.forEachExists(moveTowards, this, player, 25);
+                        game.world.forEachExists(checkIfNear, this);
+                        if (game.rnd.integerInRange(1, 50) == 7) {
+                            addNew('ball', game.world.randomX, game.world.randomY);
+                            lastAction.tint = 0xFF0000;
+                        }
+                    }
 					
 					if (game.input.pointer1.duration >= 4000 && (game.input.pointer2.isUp)) {
 						player.body.x = 50;
@@ -742,7 +768,7 @@
 						player.body.moveRight(((buildingMode)?250:350));
 					}
 
-                    if (keylist.undo.justDown) {
+                    if (keylist.undo.justDown && !isChasing) {
                         if (actions.length > 0) {
                             actions[actions.length-1].destroy();
                             actions.splice(-1,1);
@@ -761,7 +787,7 @@
 						friction++;
 					} else if (keylist.friction2.isDown) {
 						friction--;
-					} else if (keylist.toggle.justDown) {
+					} else if (keylist.toggle.justDown && !isChasing) {
 						buildingMode = !(buildingMode);
                     } else if (keylist.gridlock.justDown && !(keylist.gridlock.ctrlKey)) {
                         gridLock = !gridLock;
