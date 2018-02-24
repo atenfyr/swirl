@@ -64,11 +64,12 @@
 				const defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
 				
 				let obstacles = [];
-				let circles = [];
-				let cats = [];
-				let holes = [];
+                let circles = []
+                let cats = [];
+                let holes = [];
                 let objects = []; // immovable objects
-				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData;
+                let actions = [];
+				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction;
 				
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -120,6 +121,9 @@
 				
 				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
 				function moveTowards(obj1, obj2, speed) {
+                    if (obj1 == obj2) {
+                        return;
+                    }
 					if (obj1.body && obj2.body) {
 						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
 						obj1.body.velocity.x = (Math.cos(angle)*speed)+obj1.body.velocity.x;
@@ -312,6 +316,8 @@
 					cats = [];
 					holes = [];
                     objects = [];
+                    actions = [];
+                    lastAction = undefined;
 					friction = ((debug)?8:4);
 				}
 				
@@ -342,12 +348,13 @@
                                 atx = Math.round(atx/35)*35;
                                 aty = Math.round(player.y/35)*35;
                             }
-							circle = game.add.sprite(atx, aty, 'circle');
-							circle.name = 'circle';
-							game.physics.p2.enable(circle, debug);
-							circle.anchor.setTo(0.5, 0.5);
-							circle.body.setCircle(circle.width/2);
-							circles.push(circle);
+							lastAction = game.add.sprite(atx, aty, 'circle');
+							lastAction.name = 'circle';
+							game.physics.p2.enable(lastAction, debug);
+							lastAction.anchor.setTo(0.5, 0.5);
+							lastAction.body.setCircle(lastAction.width/2);
+							circles.push(lastAction);
+                            actions.push(lastAction);
 							break;
 						case 'box':
 						case 'square':
@@ -358,11 +365,12 @@
                                 atx = Math.round(atx/40)*40;
                                 aty = Math.round(player.y/40)*40;
                             }
-							obstacle = game.add.sprite(atx, aty, 'box');
-							obstacle.name = 'obstacle';
-							game.physics.p2.enable(obstacle, debug);
-							obstacle.body.kinematic = true;
-							obstacles.push(obstacle);
+							lastAction = game.add.sprite(atx, aty, 'box');
+							lastAction.name = 'obstacle';
+							game.physics.p2.enable(lastAction, debug);
+							lastAction.body.kinematic = true;
+							obstacles.push(lastAction);
+                            actions.push(lastAction);
 							break;
 						case 'cat':
 						case 'kitten':
@@ -370,11 +378,12 @@
                                 atx = Math.round(atx/100)*100;
                                 aty = Math.round(player.y/100)*100;
                             }
-							cat = game.add.sprite(atx, aty, 'cat');
-							cat.name = 'cat';
-							cat.scale.setTo(0.4, 0.4);
-							game.physics.p2.enable(cat, debug);
-							cats.push(cat);
+							lastAction = game.add.sprite(atx, aty, 'cat');
+							lastAction.name = 'cat';
+							lastAction.scale.setTo(0.4, 0.4);
+							game.physics.p2.enable(lastAction, debug);
+							cats.push(lastAction);
+                            actions.push(lastAction);
 							break;
 						case 'immovable':
 						case 'object':
@@ -383,11 +392,12 @@
                                 atx = Math.round(atx/40)*40;
                                 aty = Math.round(player.y/40)*40;
                             }
-							object = game.add.sprite(atx, aty, 'immovable');
-							object.name = 'object';
-							game.physics.p2.enable(object, debug);
-							object.body.kinematic = true;
-							objects.push(object);
+							lastAction = game.add.sprite(atx, aty, 'immovable');
+							lastActionname = 'object';
+							game.physics.p2.enable(lastAction, debug);
+							lastAction.body.kinematic = true;
+							objects.push(lastAction);
+                            actions.push(lastAction);
 							break;
 						case 'hole':
 						case 'blackhole':
@@ -396,14 +406,15 @@
                                 atx = Math.round(atx/55)*55;
                                 aty = Math.round(player.y/55)*55;
                             }
-                            hole = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
-                            hole.name = 'hole';
-                            hole.scale.setTo(0.055, 0.055);
-                            game.physics.p2.enable(hole, debug);
-                            hole.body.kinematic = true;
-                            hole.anchor.setTo(0.5, 0.5);
-                            hole.body.setCircle(hole.width/1.85);
-                            holes.push(hole);
+                            lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
+                            lastAction.name = 'hole';
+                            lastAction.scale.setTo(0.055, 0.055);
+                            game.physics.p2.enable(lastAction, debug);
+                            lastAction.body.kinematic = true;
+                            lastAction.anchor.setTo(0.5, 0.5);
+                            lastAction.body.setCircle(lastAction.width/1.85);
+                            holes.push(lastAction);
+                            actions.push(lastAction);
                             break;
 					}
                     log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
@@ -519,7 +530,7 @@
 					
 					game.physics.p2.restitution = 1.5;
 
-					keylist = game.input.keyboard.addKeys({ 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
+					keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
 					
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
@@ -544,19 +555,20 @@
 						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont).sendToBack();
 						game.add.text(5, 45, "Q: summons a box", defaultFont).sendToBack();
 						game.add.text(5, 65, "E: summons a ball", defaultFont).sendToBack();
-						game.add.text(5, 85, "R: resets the canvas", defaultFont).sendToBack();
+                        game.add.text(5, 85, "DEL: undo the previous action", defaultFont).sendToBack();
+						game.add.text(5, 105, "R: resets the canvas", defaultFont).sendToBack();
 						
-                        game.add.text(5, 115, "C: summons a cat", defaultFont).sendToBack();
-                        game.add.text(5, 135, "X: summons a black hole", defaultFont).sendToBack();
-                        game.add.text(5, 155, "Z: summons an immovable object", defaultFont).sendToBack();
-                        game.add.text(5, 175, "P: remove world borders", defaultFont).sendToBack();
-                        game.add.text(5, 195, "F: increases friction", defaultFont).sendToBack();
-                        game.add.text(5, 215, "G: decreases friction", defaultFont).sendToBack();
-                        game.add.text(5, 235, "T: toggle building mode", defaultFont).sendToBack();
-                        game.add.text(5, 255, "V: lock objects to grid upon summon", defaultFont).sendToBack();
-                        game.add.text(5, 275, "U: save current game state", defaultFont).sendToBack();
-                        game.add.text(5, 295, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
-                        game.add.text(5, 315, "Y: reset the tiny square", defaultFont).sendToBack();
+                        game.add.text(5, 135, "C: summons a cat", defaultFont).sendToBack();
+                        game.add.text(5, 155, "X: summons a black hole", defaultFont).sendToBack();
+                        game.add.text(5, 175, "Z: summons an immovable object", defaultFont).sendToBack();
+                        game.add.text(5, 195, "P: remove world borders", defaultFont).sendToBack();
+                        game.add.text(5, 215, "F: increases friction", defaultFont).sendToBack();
+                        game.add.text(5, 235, "G: decreases friction", defaultFont).sendToBack();
+                        game.add.text(5, 255, "T: toggle building mode", defaultFont).sendToBack();
+                        game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont).sendToBack();
+                        game.add.text(5, 295, "U: save current game state", defaultFont).sendToBack();
+                        game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
+                        game.add.text(5, 335, "Y: reset the tiny square", defaultFont).sendToBack();
 					} else {
 						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
@@ -729,11 +741,20 @@
 					} else if (keylist.right.isDown || keylist.right2.isDown) {
 						player.body.moveRight(((buildingMode)?250:350));
 					}
-					
-					if (keylist.easter.justDown && !(keylist.easter.ctrlKey)) {
+
+                    if (keylist.undo.justDown) {
+                        if (actions.length > 0) {
+                            actions[actions.length-1].destroy();
+                            actions.splice(-1,1);
+                        }
+					}
+                    
+                    if (keylist.easter.justDown && !(keylist.easter.ctrlKey)) {
 						addNew('cat', player.x, player.y, gridLock);
                     } else if (keylist.object.justDown && !(keylist.object.ctrlKey)) {
                         addNew('immovable object', player.x, player.y, gridLock);
+                    } else if (keylist.vacuum.isDown) {
+						game.world.forEachExists(moveTowards, this, player, 25);
 					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey)) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
 					} else if (keylist.friction.isDown) {
