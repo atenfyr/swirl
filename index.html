@@ -139,6 +139,7 @@
                         }
                         new Audio('assets/audio/beep.mp3').play();
                         if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
+                            livesText.setText('0 lives remaining');
                             game.paused = true;
                             game.input.keyboard.stop();
                             return;
@@ -823,20 +824,32 @@
                     if (isChasing) {
                         game.world.forEachExists(moveTowards, this, player, 25, true);
                         game.world.forEachExists(checkIfNear, this);
-                        onAll(function(obj) {
-                            if (obj.name == 'dangerous') {
-                                onAll('black holes', function(hole) {
-                                    if ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (3+(hole.width*0.75)+obj.offsetX))) {
-                                        if (game.rnd.integerInRange(1, 10) >= 7) {
-                                            hole.destroy();
-                                        } else {
-                                            obj.destroy();
-                                        }
+                        onAll('black holes', function(hole) {
+                            if (actions.length >= 0) {
+                                let randomAction = actions[game.rnd.integerInRange(0, actions.length-1)];
+                                if (randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 100) == 1) {
+                                    randomAction.destroy();
+                                    if (game.rnd.integerInRange(1, 5) == 1) {
+                                        hole.destroy();
                                     }
-                                });
+                                }
                             }
                         });
-                        if (game.rnd.integerInRange(1, 230-(countdown.seconds*1.5)) == 1) {
+                        let spawnrate = 120;
+                        if (countdown.seconds >= 140) {
+                            spawnrate = 1;
+                        } else if (countdown.seconds >= 120) {
+                            spawnrate = 20;
+                        } else if (countdown.seconds >= 90) {
+                            spawnrate = 40;
+                        } else if (countdown.seconds >= 60) {
+                            spawnrate = 60;
+                        } else if (countdown.seconds >= 30) {
+                            spawnrate = 80;
+                        } else if (countdown.seconds >= 10) {
+                            spawnrate = 100;
+                        }
+                        if (game.rnd.integerInRange(1, spawnrate) == 1) {
                             addNew('random', game.world.randomX, game.world.randomY, false, true);
                             lastAction.tint = 0xFF0000;
                             lastAction.name = 'dangerous';
