@@ -68,8 +68,9 @@
                 let holes = [];
                 let objects = []; // immovable objects
                 let actions = [];
-                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon;
-				
+                let lines = [];
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics;
+
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
 				let friction = ((debug)?8:4);
@@ -121,7 +122,7 @@
 				
 				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
 				function moveTowards(obj1, obj2, speed, isChasing) {
-                    if (obj1 == obj2 || obj1.name == 'object' || isChasing && obj1.name == 'hole') {
+                    if (obj1 == obj2 || isChasing && obj1.name != 'dangerous') {
                         return;
                     }
 					if (obj1.body && obj2.body) {
@@ -601,6 +602,7 @@
                         timerText.setText(formatTime(Math.round((countdownEvent.delay - countdown.ms) / 1000)));
                     } else if (timerText) {
                         timerText.setText('Victory!');
+                        tipText.destroy();
                         isChasing = false;
                         hasWon = true;
                         textGroup.visible = true;
@@ -617,6 +619,8 @@
 				function create() {
                     countdown = game.time.create();
                     countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, endTimer, this);
+                    graphics = game.add.graphics(0, 0);
+                    graphics.lineStyle(3, 0x00FF00, 1);
 
 					mobile = !(game.device.desktop);
 					if ((url.searchParams.get("mobile")) != null) {
@@ -670,9 +674,11 @@
                             if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
                                 sprite.tint = 0xFF0000;
                                 sprite.name = 'dangerous';
+                                sprite.body.kinematic = false;
                             }
                         });
                         lives = 5;
+                        tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
                         livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
                         timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#FFFFFF"});
                         countdown.start();
@@ -827,11 +833,28 @@
                         onAll('black holes', function(hole) {
                             if (actions.length >= 0) {
                                 let randomAction = actions[game.rnd.integerInRange(0, actions.length-1)];
-                                if (randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 100) == 1) {
-                                    randomAction.destroy();
-                                    if (game.rnd.integerInRange(1, 5) == 1) {
-                                        hole.destroy();
-                                    }
+                                if (randomAction.body && (Phaser.Math.distance(randomAction.x, randomAction.y, hole.x, hole.y) <= 300) && !lines[randomAction] && randomAction.exists && randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 30) == 1) {
+                                    graphics = game.add.graphics(0, 0);
+                                    graphics.lineStyle(3, 0xFFFF00, 1);
+                                    graphics.moveTo(hole.x, hole.y);
+                                    lines[randomAction] = graphics.lineTo(randomAction.x-5, randomAction.y-5);
+                                    graphics.endFill();
+
+                                    randomAction.name = 'safe';
+                                    randomAction.body.kinematic = true;
+                                    randomAction.body.velocity.x = 0;
+                                    randomAction.body.velocity.y = 0;
+                                    randomAction.body.angularVelocity = 0;
+                                    setTimeout(function() {
+                                        if (lines[randomAction]) {
+                                            lines[randomAction].destroy();
+                                            delete lines[randomAction];
+                                        }
+                                        randomAction.destroy();
+                                        if (game.rnd.integerInRange(1, 5) == 1) {
+                                            hole.destroy();
+                                        }
+                                    }, 2000);
                                 }
                             }
                         });
@@ -853,6 +876,7 @@
                             addNew('random', game.world.randomX, game.world.randomY, false, true);
                             lastAction.tint = 0xFF0000;
                             lastAction.name = 'dangerous';
+                            lastAction.body.kinematic = false;
                         }
                     }
 					
