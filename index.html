@@ -68,7 +68,7 @@
                 let holes = [];
                 let objects = []; // immovable objects
                 let actions = [];
-				let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction;
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon;
 				
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -88,6 +88,7 @@
                 
 				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
                 $('.game').hide();
+
                 
 				function goodBoi() {
 					if (buildingMode) {
@@ -119,8 +120,8 @@
 				}
 				
 				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
-				function moveTowards(obj1, obj2, speed) {
-                    if (obj1 == obj2 || obj1.name == 'object') {
+				function moveTowards(obj1, obj2, speed, isChasing) {
+                    if (obj1 == obj2 || obj1.name == 'object' || isChasing && obj1.name == 'hole') {
                         return;
                     }
 					if (obj1.body && obj2.body) {
@@ -131,15 +132,33 @@
 				}
 
                 function checkIfNear(obj) {
-                    if (obj.name == 'circle' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
-                        game.paused = true;
-						game.input.keyboard.stop();
+                    if (obj.name == 'dangerous' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         new Audio('assets/audio/beep.mp3').play();
-                        return;
+                        if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
+                            livesText.destroy();
+                            timerText.destroy();
+                            game.paused = true;
+                            game.input.keyboard.stop();
+                            return;
+                        } else {
+                            lives--;
+                            resetPlayer(true);
+                            switch(lives) {
+                                case 1:
+                                    livesText.setText('1 life remaining');
+                                    break;
+                                default:
+                                    livesText.setText(lives + ' lives remaining');
+                                    break;
+                            }
+                        }
                     }
                 }
 				
 				function moveToHole(obj) {
+                    if (isChasing) {
+                        return;
+                    }
 					if ((obj["name"] != 'player') || spinnyBoi) {
 						if (obj.body) {
 							for (var i in holes) {
@@ -188,6 +207,7 @@
                     game.load.audio('die', 'assets/audio/die.mp3');
                     game.load.audio('game', 'assets/audio/game.mp3');
                     game.load.audio('glass', 'assets/audio/glass.mp3');
+                    textGroup = game.add.group();
 				}
 				
 				String.prototype.replaceAll = function(search, replacement) {
@@ -332,10 +352,17 @@
 					friction = ((debug)?8:4);
 				}
 				
-				function resetPlayer() {
+				function resetPlayer(randomly) {
 					player.kill();
-					player.reset(w/2, h/2);
-					game.camera.reset(w/2, h/2);
+                    if (randomly) {
+                        let newPlayerX = game.world.randomX;
+                        let newPlayerY = game.world.randomY;
+					    player.reset(newPlayerX, newPlayerY);
+					    game.camera.reset(newPlayerX, newPlayerY);
+                    } else {
+					    player.reset(w/2, h/2);
+					    game.camera.reset(w/2, h/2);
+                    }
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 				}
@@ -348,9 +375,32 @@
 					currentTrack = null;
 				}
 
-				function addNew(type, atx, aty, lockOntoGrid) {
+				function addNew(type, atx, aty, lockOntoGrid, dontAssociate) {
 					atx = atx || player.x;
                     aty = aty || player.y;
+
+                    if (isChasing && type != 'hole' && type != 'blackhole' && type != 'black hole') {
+                        atx = game.world.randomX;
+                        aty = game.world.randomY;
+                    }
+
+                    if (type == 'random') {
+                        switch(game.rnd.integerInRange(1,4)) {
+                            case 1:
+                                type = 'box';
+                                break;
+                            case 2:
+                                type = 'cat';
+                                break;
+                            case 3:
+                                type = 'immovable object';
+                                break;
+                            default:
+                                type = 'ball';
+                                break;
+                        }
+                    }
+
 					switch(type) {
 						case 'circle':
                         case 'sphere':
@@ -364,7 +414,9 @@
 							game.physics.p2.enable(lastAction, debug);
 							lastAction.anchor.setTo(0.5, 0.5);
 							lastAction.body.setCircle(lastAction.width/2);
-							circles.push(lastAction);
+                            if (!dontAssociate) {
+							    circles.push(lastAction);
+                            }
                             actions.push(lastAction);
 							break;
 						case 'box':
@@ -380,7 +432,9 @@
 							lastAction.name = 'obstacle';
 							game.physics.p2.enable(lastAction, debug);
 							lastAction.body.kinematic = true;
-							obstacles.push(lastAction);
+                            if (!dontAssociate) {
+							    obstacles.push(lastAction);
+                            }
                             actions.push(lastAction);
 							break;
 						case 'cat':
@@ -393,7 +447,9 @@
 							lastAction.name = 'cat';
 							lastAction.scale.setTo(0.4, 0.4);
 							game.physics.p2.enable(lastAction, debug);
-							cats.push(lastAction);
+                            if (!dontAssociate) {
+							    cats.push(lastAction);
+                            }
                             actions.push(lastAction);
 							break;
 						case 'immovable':
@@ -407,7 +463,9 @@
 							lastAction.name = 'object';
 							game.physics.p2.enable(lastAction, debug);
 							lastAction.body.kinematic = true;
-							objects.push(lastAction);
+                            if (!dontAssociate) {
+							    objects.push(lastAction);
+                            }
                             actions.push(lastAction);
 							break;
 						case 'hole':
@@ -424,11 +482,19 @@
                             lastAction.body.kinematic = true;
                             lastAction.anchor.setTo(0.5, 0.5);
                             lastAction.body.setCircle(lastAction.width/1.85);
-                            holes.push(lastAction);
+                            if (!dontAssociate) {
+                                holes.push(lastAction);
+                            }
                             actions.push(lastAction);
                             break;
 					}
                     log('Summoned ' + type + ' at position ' + atx + ', ' + aty);
+                    if (isChasing) {
+                        if (lastAction.name != 'hole') {
+                            lastAction.tint = 0xFF0000;
+                            lastAction.name = 'dangerous';
+                        }
+                    }
 				}
 				
 				function frictionCheck(spr, noFriction) {
@@ -515,12 +581,40 @@
 						}
 					}
 				}
-				
+
+                function endTimer() {
+                    countdown.stop();
+                }
+
+                function formatTime(s) {
+                    var minutes = "0" + Math.floor(s / 60);
+                    var seconds = "0" + (s - minutes * 60);
+                    return minutes.substr(-2) + ":" + seconds.substr(-2);   
+                }
+
 				function render() {
 					game.renderer.renderSession.roundPixels = true;
+                    if (countdown.running) {
+                        timerText.setText(formatTime(Math.round((countdownEvent.delay - countdown.ms) / 1000)));
+                    } else if (timerText) {
+                        timerText.setText('Victory!');
+                        isChasing = false;
+                        hasWon = true;
+                        textGroup.visible = true;
+                        onAll(function(element) {
+                            if (element.name == 'dangerous' && element.body) {
+                                element.body.velocity.x = -1000;
+                                element.body.velocity.y = 0;
+                                element.body.kinematic = true;
+                            }
+                        });
+                    }
 				}
 				
 				function create() {
+                    countdown = game.time.create();
+                    countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, endTimer, this);
+
 					mobile = !(game.device.desktop);
 					if ((url.searchParams.get("mobile")) != null) {
 						mobile = true;
@@ -558,9 +652,27 @@
 						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0M1M1R";
 					});
                     cheet(', .', function() {
+                        if (isChasing || hasWon) {
+                            return;
+                        }
                         game.world.setBounds(0, 0, w+1, h+1);
                         isChasing = true;
                         buildingMode = false;
+                        dieSound = false;
+                        if (music) {
+                            music.stop();
+                        }
+                        onAll(function(sprite) { // make all pre-existing sprites dangerous
+                            if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
+                                sprite.tint = 0xFF0000;
+                                sprite.name = 'dangerous';
+                            }
+                        });
+                        lives = 5;
+                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"}).sendToBack();
+                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#FFFFFF"}).sendToBack();
+                        countdown.start();
+                        textGroup.visible = false;
                         game.add.audio('glass').play('', 0, 0.75);
                     });
 					
@@ -568,24 +680,24 @@
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 
 					if (!mobile) {
-						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont).sendToBack();
-						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont).sendToBack();
-						game.add.text(5, 45, "Q: summons a box", defaultFont).sendToBack();
-						game.add.text(5, 65, "E: summons a ball", defaultFont).sendToBack();
-                        game.add.text(5, 85, "DEL: undo the previous action", defaultFont).sendToBack();
-						game.add.text(5, 105, "R: resets the canvas", defaultFont).sendToBack();
+						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 45, "Q: summons a box", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 65, "E: summons a ball", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 85, "DEL: undo the previous action", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 105, "R: resets the canvas", defaultFont, textGroup).sendToBack();
 						
-                        game.add.text(5, 135, "C: summons a cat", defaultFont).sendToBack();
-                        game.add.text(5, 155, "X: summons a black hole", defaultFont).sendToBack();
-                        game.add.text(5, 175, "Z: summons an immovable object", defaultFont).sendToBack();
-                        game.add.text(5, 195, "P: remove world borders", defaultFont).sendToBack();
-                        game.add.text(5, 215, "F: increases friction", defaultFont).sendToBack();
-                        game.add.text(5, 235, "G: decreases friction", defaultFont).sendToBack();
-                        game.add.text(5, 255, "T: toggle building mode", defaultFont).sendToBack();
-                        game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont).sendToBack();
-                        game.add.text(5, 295, "U: save current game state", defaultFont).sendToBack();
-                        game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont).sendToBack();
-                        game.add.text(5, 335, "Y: reset the tiny square", defaultFont).sendToBack();
+                        game.add.text(5, 135, "C: summons a cat", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 155, "X: summons a black hole", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 175, "Z: summons an immovable object", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 195, "P: remove world borders", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 215, "F: increases friction", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 235, "G: decreases friction", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 255, "T: toggle building mode", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 295, "U: save current game state", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 335, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
 					} else {
 						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
@@ -596,6 +708,7 @@
 						player.body.x = 50;
 						player.body.y = 250;
 					}
+
 					
 					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
@@ -629,7 +742,7 @@
 							}
 							for (var i in result["c"]) {
 								if (result["c"][i]) {
-                                    addNew('circle', result['c'][i][0], result['c'][i][1], false);
+                                    addNew('ball', result['c'][i][0], result['c'][i][1], false);
 								}
 							}
 							for (var i in result["d"]) {
@@ -682,6 +795,7 @@
 							setTrack(trackList[result["g"][8]]);
                             dieSound = (result["g"][9] == 1);
                             gridLock = (result['g'][10] == 1);
+                            isChasing = (result['g'][11] == 1);
                             player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 						}
 					}
@@ -703,11 +817,21 @@
 					player.body.angularVelocity = 8;
 					game.world.forEachExists(frictionCheck, this);
                     if (isChasing) {
-                        game.world.forEachExists(moveTowards, this, player, 25);
+                        game.world.forEachExists(moveTowards, this, player, 25, true);
                         game.world.forEachExists(checkIfNear, this);
-                        if (game.rnd.integerInRange(1, 50) == 7) {
-                            addNew('ball', game.world.randomX, game.world.randomY);
+                        onAll(function(obj) {
+                            if (obj.name == 'dangerous') {
+                                onAll('black holes', function(hole) {
+                                    if (game.rnd.integerInRange(1, 200) == 10 && ((Phaser.Math.distance(hole.x, hole.y, obj.x, obj.y) <= (10+(hole.width*0.75)+obj.offsetX)))) {
+                                        obj.destroy();
+                                    }
+                                });
+                            }
+                        });
+                        if (game.rnd.integerInRange(1, 100) == 50) {
+                            addNew('random', game.world.randomX, game.world.randomY, false, true);
                             lastAction.tint = 0xFF0000;
+                            lastAction.name = 'dangerous';
                         }
                     }
 					
@@ -829,7 +953,7 @@
                         if (trackNumber == -1) { trackNumber = 0; }
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0), ((isChasing)?1:0)];
                         
 						var b64data = swirlEncode(JSON.stringify(result));
                         decodedSaveData = JSON.stringify(result);
@@ -861,7 +985,7 @@
 					if (keylist.hole.justDown && player.alive) {
 						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
-						addNew('circle', player.x, player.y, gridLock);
+						addNew('ball', player.x, player.y, gridLock);
 					} else if (keylist.speed1.isDown) {
 						player.body.velocity.y -= 20;
 					} else if (keylist.speed2.isDown) {
