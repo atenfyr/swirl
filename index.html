@@ -139,8 +139,6 @@
                         }
                         new Audio('assets/audio/beep.mp3').play();
                         if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
-                            livesText.destroy();
-                            timerText.destroy();
                             game.paused = true;
                             game.input.keyboard.stop();
                             return;
