@@ -952,7 +952,7 @@
                         addNew('immovable object', player.x, player.y, gridLock);
                     } else if (keylist.vacuum.isDown) {
 						game.world.forEachExists(moveTowards, this, player, 25);
-					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey)) {
+					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey) && !isChasing) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
 					} else if (keylist.friction.isDown && !isChasing) {
 						friction++;
@@ -1042,9 +1042,9 @@
 						player.body.velocity.y += 20;
 					} else if (keylist.speed4.isDown) {
 						player.body.velocity.x += 20;
-					} else if (keylist.reset.isDown) {
+					} else if (keylist.reset.isDown && !isChasing) {
 						resetCanvas();
-					} else if (keylist.preset.isDown) {
+					} else if (keylist.preset.isDown && !isChasing) {
 						resetPlayer();
 					}
 					
