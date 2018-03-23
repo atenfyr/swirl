@@ -1029,7 +1029,7 @@
 						player.body.y -= 10;
 					}
 					
-					if (keylist.hole.justDown && player.alive) {
+					if ((keylist.hole.justDown && player.alive) || (isChasing && keylist.hole.isDown && player.alive)) {
 						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
 						addNew('ball', player.x, player.y, gridLock);
