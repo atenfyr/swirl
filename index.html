@@ -69,7 +69,7 @@
                 let objects = []; // immovable objects
                 let actions = [];
                 let lines = [];
-                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics;
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode;
 
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -1029,7 +1029,7 @@
 						player.body.y -= 10;
 					}
 					
-					if ((keylist.hole.justDown && player.alive) || (isChasing && keylist.hole.isDown && player.alive)) {
+					if ((keylist.hole.justDown && player.alive) || (cheatMode && isChasing && keylist.hole.isDown && player.alive)) {
 						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
 						addNew('ball', player.x, player.y, gridLock);
