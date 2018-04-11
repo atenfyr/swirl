@@ -69,7 +69,7 @@
                 let objects = []; // immovable objects
                 let actions = [];
                 let lines = [];
-                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode;
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
 
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -667,14 +667,16 @@
                         if (music) {
                             music.stop();
                         }
-                        onAll(function(sprite) { // make all pre-existing sprites dangerous
-                            if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
-                                sprite.tint = 0xFF0000;
-                                sprite.name = 'dangerous';
-                                sprite.body.dynamic = true;
-                                game.physics.p2.enable(sprite, debug);
-                            }
-                        });
+			if (!disableTransform) {
+			    onAll(function(sprite) { // make all pre-existing sprites dangerous
+			        if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
+				    sprite.tint = 0xFF0000;
+				    sprite.name = 'dangerous';
+				    sprite.body.dynamic = true;
+				    game.physics.p2.enable(sprite, debug);
+			        }
+			    });
+			}
                         lives = 5;
                         tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
                         livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
