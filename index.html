@@ -227,7 +227,8 @@
 					['"d":', 'd'], // cats, c was taken so next letter (d)
                     ['"i":', 'i'], // (i)mmovable objects
 					['"p":', 'p'], // (p)layer
-					['"g":', 'g'], // (g)eneral
+                    ['"g":', 'g'], // (g)eneral
+                    ['"f":', 'f'], // (f)lag (1 if generated in swirl client, 0 if not)
 					
 					// shortens some of the structure
 					['],[', 'J'], // inter(J)ection
@@ -376,7 +377,7 @@
 					currentTrack = null;
 				}
 
-				function addNew(type, atx, aty, lockOntoGrid, dontAssociate) {
+				function addNew(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
 					atx = atx || player.x;
                     aty = aty || player.y;
 
@@ -414,7 +415,11 @@
 							lastAction.name = 'circle';
 							game.physics.p2.enable(lastAction, debug);
 							lastAction.anchor.setTo(0.5, 0.5);
-							lastAction.body.setCircle(lastAction.width/2);
+                            lastAction.body.setCircle(lastAction.width/2);
+                            if (vx && vy) {
+                                lastAction.velocity.x = vx;
+                                lastAction.velocity.x = vy;
+                            }
                             if (!dontAssociate) {
 							    circles.push(lastAction);
                             }
@@ -432,7 +437,11 @@
 							lastAction = game.add.sprite(atx, aty, 'box');
 							lastAction.name = 'obstacle';
 							game.physics.p2.enable(lastAction, debug);
-							lastAction.body.kinematic = true;
+                            lastAction.body.kinematic = true;
+                            if (vx && vy) {
+                                lastAction.velocity.x = vx;
+                                lastAction.velocity.x = vy;
+                            }
                             if (!dontAssociate) {
 							    obstacles.push(lastAction);
                             }
@@ -447,7 +456,11 @@
 							lastAction = game.add.sprite(atx, aty, 'cat');
 							lastAction.name = 'cat';
 							lastAction.scale.setTo(0.4, 0.4);
-							game.physics.p2.enable(lastAction, debug);
+                            game.physics.p2.enable(lastAction, debug);
+                            if (vx && vy) {
+                                lastAction.velocity.x = vx;
+                                lastAction.velocity.x = vy;
+                            }
                             if (!dontAssociate) {
 							    cats.push(lastAction);
                             }
@@ -463,7 +476,11 @@
 							lastAction = game.add.sprite(atx, aty, 'immovable');
 							lastAction.name = 'object';
 							game.physics.p2.enable(lastAction, debug);
-							lastAction.body.kinematic = true;
+                            lastAction.body.kinematic = true;
+                            if (vx && vy) {
+                                lastAction.velocity.x = vx;
+                                lastAction.velocity.x = vy;
+                            }
                             if (!dontAssociate) {
 							    objects.push(lastAction);
                             }
@@ -483,6 +500,10 @@
                             lastAction.body.kinematic = true;
                             lastAction.anchor.setTo(0.5, 0.5);
                             lastAction.body.setCircle(lastAction.width/1.85);
+                            if (vx && vy) {
+                                lastAction.velocity.x = vx;
+                                lastAction.velocity.x = vy;
+                            }
                             if (!dontAssociate) {
                                 holes.push(lastAction);
                             }
@@ -649,7 +670,7 @@
 						dieSound = !dieSound;
 						dieAudio.play('', 0, 1);
 					});
-					cheet('m i i', function() {
+					cheet('w i i', function() {
 						setTrack('mii');
 					});
 					cheet('c h a o s', function() {
@@ -730,7 +751,7 @@
 						} catch(err) {
 							didErr = true;
 						}
-						if (didErr || !result || (!(result["o"]))) {
+						if (didErr || !result) {
 							game.paused = true;
 							game.input.keyboard.stop();
 							swal({
@@ -804,6 +825,19 @@
                             dieSound = (result["g"][9] == 1);
                             gridLock = (result['g'][10] == 1);
                             player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+
+                            if (result['f'] == 1) {
+                                game.paused = true;
+                                game.input.keyboard.stop();
+                                swal({
+                                    type: 'warning',
+                                    title: 'Unstable Save',
+                                    text: 'This save file was generated with the Swirl Desktop Client, and may not be stable.'
+                                }).then(() => {
+                                    game.paused = false;
+                                    game.input.keyboard.start();
+                                });
+                            }
 						}
 					}
 				}
