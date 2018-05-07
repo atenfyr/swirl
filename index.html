@@ -419,7 +419,7 @@
                             lastAction.body.setCircle(lastAction.width/2);
                             if (vx && vy) {
                                 lastAction.velocity.x = vx;
-                                lastAction.velocity.x = vy;
+                                lastAction.velocity.y = vy;
                             }
                             if (!dontAssociate) {
 							    circles.push(lastAction);
@@ -441,7 +441,7 @@
                             lastAction.body.kinematic = true;
                             if (vx && vy) {
                                 lastAction.velocity.x = vx;
-                                lastAction.velocity.x = vy;
+                                lastAction.velocity.y = vy;
                             }
                             if (!dontAssociate) {
 							    obstacles.push(lastAction);
@@ -460,7 +460,7 @@
                             game.physics.p2.enable(lastAction, debug);
                             if (vx && vy) {
                                 lastAction.velocity.x = vx;
-                                lastAction.velocity.x = vy;
+                                lastAction.velocity.y = vy;
                             }
                             if (!dontAssociate) {
 							    cats.push(lastAction);
@@ -480,7 +480,7 @@
                             lastAction.body.kinematic = true;
                             if (vx && vy) {
                                 lastAction.velocity.x = vx;
-                                lastAction.velocity.x = vy;
+                                lastAction.velocity.y = vy;
                             }
                             if (!dontAssociate) {
 							    objects.push(lastAction);
@@ -503,7 +503,7 @@
                             lastAction.body.setCircle(lastAction.width/1.85);
                             if (vx && vy) {
                                 lastAction.velocity.x = vx;
-                                lastAction.velocity.x = vy;
+                                lastAction.velocity.y = vy;
                             }
                             if (!dontAssociate) {
                                 holes.push(lastAction);
