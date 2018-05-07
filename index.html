@@ -10,15 +10,15 @@
         Logger.js: http://www.songho.ca/misc/logger/logger.html
 	-->
     <head>
-        	<meta charset="UTF-8" />
-		<link rel="icon" href="favicon.ico">
-		<title>Swirl</title>
+        <meta charset="UTF-8" />
+        <link rel="icon" href="favicon.ico">
+        <title>Swirl</title>
 		<script src="assets/scripts/jquery-3.2.1.min.js"></script>
 		<script src="assets/scripts/phaser.min.js"></script>
 		<script src="assets/scripts/swipe.js"></script>
 		<script src="assets/scripts/cheet.min.js"></script>
-        	<script src="assets/scripts/sweetalert2.all.min.js"></script>
-        	<script src="assets/scripts/logger.js"></script>
+        <script src="assets/scripts/sweetalert2.all.min.js"></script>
+        <script src="assets/scripts/logger.js"></script>
 		<style>
 			body, .game {
 				margin: 0 auto;
@@ -70,7 +70,7 @@
                 let objects = []; // immovable objects
                 let actions = [];
                 let lines = [];
-                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics;
 
 				let debug = (url.searchParams.get("debug") != null);
 				let save = (url.searchParams.get("load"));
@@ -689,16 +689,14 @@
                         if (music) {
                             music.stop();
                         }
-			if (!disableTransform) {
-			    onAll(function(sprite) { // make all pre-existing sprites dangerous
-			        if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
-				    sprite.tint = 0xFF0000;
-				    sprite.name = 'dangerous';
-				    sprite.body.dynamic = true;
-				    game.physics.p2.enable(sprite, debug);
-			        }
-			    });
-			}
+                        onAll(function(sprite) { // make all pre-existing sprites dangerous
+                            if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
+                                sprite.tint = 0xFF0000;
+                                sprite.name = 'dangerous';
+                                sprite.body.dynamic = true;
+                                game.physics.p2.enable(sprite, debug);
+                            }
+                        });
                         lives = 5;
                         tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
                         livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
@@ -1066,7 +1064,7 @@
 						player.body.y -= 10;
 					}
 					
-					if ((keylist.hole.justDown && player.alive) || (cheatMode && isChasing && keylist.hole.isDown && player.alive)) {
+					if (keylist.hole.justDown && player.alive) {
 						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
 						addNew('ball', player.x, player.y, gridLock);
