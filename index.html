@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<!--
-		Uses Phaser, cheet.js, phaser-swipe, and SweetAlert2.
+		Uses Phaser, cheet.js, phaser-swipe, SweetAlert2, and Logger.js.
 		Phaser: https://phaser.io/
 		cheet.js: http://lou.wtf/cheet.js/
 		phaser-swipe: https://github.com/flogvit/phaser-swipe
@@ -16,7 +16,7 @@
             const debug = false;
             const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
 
-            var fs, electron, dialog, thisWindow, isValid
+            var fs, electron, dialog, thisWindow, isValid;
             if (isClient) {
                 fs = require('fs');
                 electron = require('electron');
