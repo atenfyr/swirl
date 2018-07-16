@@ -11,6 +11,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({width: display.width, height: display.height, icon:'./assets/images/logo.png'});
     mainWindow.maximize();
 
+    //mainWindow.webContents.openDevTools();
+
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'index.html'),
         protocol: 'file:',
