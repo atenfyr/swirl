@@ -59,7 +59,7 @@
                 let objects = []; // immovable objects
                 let actions = [];
                 let lines = [];
-                let save, player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
+                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
 
 				let friction = 4;
 				let buildingMode, suckable, isChasing, dieSound, gridLock = false;
@@ -239,11 +239,44 @@
 				}
 				
 				function swirlDecode(text) {
-                    if (text.substring(0,9) === 'U1dJUkw2N') return atob(text).substring(7); // if you give it some base64 which starts with SWIRL64, it'll decode it as base64 instead
 					for (var j in saveLibrary) {
 						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0]);
 					}
 					return text;
+                }
+
+                function clientLoadSave(data) {
+                    if (!isClient) return false;
+
+                    let result, didErr = false;
+                    let save = data.split('\n');
+                    try {
+                        result = JSON.parse(swirlDecode(save[0]));
+                    } catch(err) {
+                        didErr = true;
+                    }
+
+                    if (!didErr && result) {
+                        loadSaveData(result);
+                    }
+
+                    if (save[1]) {
+                        console.log(save[1]);
+                        try {
+                            eval(atob(save[1]));
+                        } catch(err) {
+                            game.paused = true;
+                            game.input.keyboard.stop();
+                            swal({
+                                title: 'Error in Script',
+                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                type: 'error'
+                            }).then(() => {
+                                game.paused = false;
+                                game.input.keyboard.start();
+                            });
+                        }
+                    }
                 }
                 
                 function loadSaveData(result) {
@@ -820,23 +853,14 @@
 					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.parentIsWindow = true;
 
-                    let result, didErr = false;
                     if (isClient) {
                         if (electron.remote.process.argv[1] && isValid(electron.remote.process.argv[1]) && !fs.lstatSync(electron.remote.process.argv[1]).isDirectory()) {
-                            save = fs.readFileSync(electron.remote.process.argv[1], 'utf-8');
-                        }
-
-                        try {
-                            result = JSON.parse(swirlDecode(save));
-                        } catch(err) {
-                            didErr = true;
-                        }
-
-                        if (!didErr && result) {
-                            loadSaveData(result);
+                            clientLoadSave(fs.readFileSync(electron.remote.process.argv[1], 'utf-8'));
                         }
                     } else {
-                        save = currentURL.searchParams.get("load");
+                        let result, didErr = false;
+                        let save = currentURL.searchParams.get("load");
+                        let script = currentURL.searchParams.get("script");
                         if (save) {
                             try {
                                 result = JSON.parse(swirlDecode(save));
@@ -853,6 +877,22 @@
                                     type: 'error',
                                     title: 'Corrupted Save',
                                     text: 'The save file you have attempted to load is corrupted or invalid.'
+                                }).then(() => {
+                                    game.paused = false;
+                                    game.input.keyboard.start();
+                                });
+                            }
+                        }
+                        if (script) {
+                            try {
+                                eval(atob(script));
+                            } catch(err) {
+                                game.paused = true;
+                                game.input.keyboard.stop();
+                                swal({
+                                    title: 'Error in Script',
+                                    html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                    type: 'error'
                                 }).then(() => {
                                     game.paused = false;
                                     game.input.keyboard.start();
@@ -1088,7 +1128,7 @@
                             dialog.showOpenDialog({"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(loadPath) {
                                 if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
                                     let thisData = fs.readFileSync(loadPath[0], 'utf-8');
-                                    loadSaveData(JSON.parse(swirlDecode(thisData)));
+                                    clientLoadSave(thisData);
                                 }
                             });
                         }
