@@ -727,7 +727,7 @@
 					game.physics.p2.restitution = 1.5;
 
                     if (isClient) {
-					    keylist = game.input.keyboard.addKeys({'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT, 'fullscreen': Phaser.KeyCode.F12, 'refreshPage': Phaser.KeyCode.F5, 'loadSave': Phaser.KeyCode.M, 'toggleSite': Phaser.KeyCode.O});
+					    keylist = game.input.keyboard.addKeys({'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT, 'fullscreen': Phaser.KeyCode.F12, 'refreshPage': Phaser.KeyCode.F5, 'loadSave': Phaser.KeyCode.M});
                     } else {
                         keylist = game.input.keyboard.addKeys({'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT});
                     }
@@ -802,8 +802,7 @@
                             game.add.text(5, 315, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
                             game.add.text(5, 345, "U: save current game state", defaultFont, textGroup).sendToBack();
                             game.add.text(5, 365, "M: load save data", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 385, "O: go " + ((window.location.href.indexOf('file') > -1)?'online':'offline'), defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 405, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
                         }
                     } else {
                         defaultFont = {font: "25px Consolas", fill: "#FFFFFF"};
@@ -1093,16 +1092,6 @@
                                     loadSaveData(JSON.parse(swirlDecode(thisData)));
                                 }
                             });
-                        } else if (keylist.toggleSite.justDown) {
-                            if (window.location.href.indexOf('file') > -1) {
-                                window.location.href = 'https://atenfyr.github.io/swirl';
-                            } else {
-                                window.location.href = url.format({
-                                    pathname: path.join(__dirname, 'index.html'),
-                                    protocol: 'file:',
-                                    slashes: true
-                                });
-                            }
                         }
                     }
 					
