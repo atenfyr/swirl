@@ -218,24 +218,24 @@
 					
 					// shortens some of the structure
 					['],[', 'J'], // inter(J)ection
-					['[[', 'E'], // doubl(E) bracket
-					[']]', 'U'], // do(U)ble bracket
+					['[[', 'E'], // opening doubl(E) bracket
+					[']]', 'U'], // closing do(U)ble bracket
 					['[]', 'N'], // (N)one (no contents for this section of the JSON)
 					[']}', 'R'], // (R)ight close
 					['{[', 'L'], // (L)eft close
 					['0,0', 'Z'], // two (Z)eros
 					
 					// just switched characters to make sure the URL is valid
-					['[', 'B'], // (B)racket
+					['[', 'B'], // opening (B)racket
 					[']', 'C'], // (C)losing bracket
-					['{', 'Y'], // curl(Y) bracket
-					['}', 'T'], // curly bracke(T)
+					['{', 'Y'], // opening curl(Y) bracket
+					['}', 'T'], // closing curly bracke(T)
 					['"', 'Q'], // (Q)uote
 					[',', 'M'], // co(M)ma
-					[':', 'O'], // c(o)lon
+					[':', 'O'], // c(O)lon
 					['-', 'P'], // o(P)posite
 					['.', 'D'], // (D)ecimal
-				];
+				]
 					
 				function swirlEncode(text) {
 					for (var i in saveLibrary) {
@@ -350,6 +350,10 @@
                                 array = holes;
                                 break;
                             case 'player':
+                            case 'me':
+                            case 'you':
+                            case 'tiny square':
+                            case 'white square':
                                 array = [player];
                                 break;
                             default:
@@ -564,7 +568,25 @@
                             lastAction.name = 'dangerous';
                         }
                     }
-				}
+                }
+                
+                function tieScript(obj, func) {
+                    if (!obj.data) obj.data = {};
+                    obj.data.script = func;
+                    obj.data.scriptEnabled = true;
+                }
+                tieFunction = tieScript;
+                addScript = tieScript;
+                addFunction = tieScript;
+
+                function scriptCheck(obj) {
+                    if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+                        obj.data.script();
+                        obj.data.scriptEnabled = false;
+                    } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+                        obj.data.scriptEnabled = true;
+                    }
+                }
 				
 				function frictionCheck(spr, noFriction) {
 					if (spr.body) {
@@ -591,7 +613,7 @@
 						}
 					}
 										
-					 if (buildingMode && spr && spr.body) {
+					if (buildingMode && spr && spr.body) {
 						spr.body.velocity.x = 0;
 						spr.body.velocity.y = 0;
 						if (spr["name"] != "player") {
@@ -708,9 +730,9 @@
 					game.physics.p2.restitution = 1.5;
 
                     if (isClient) {
-					    keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT, 'fullscreen': Phaser.KeyCode.F12, 'refreshPage': Phaser.KeyCode.F5, 'loadSave': Phaser.KeyCode.M});
+					    keylist = game.input.keyboard.addKeys({'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT, 'fullscreen': Phaser.KeyCode.F12, 'refreshPage': Phaser.KeyCode.F5, 'loadSave': Phaser.KeyCode.M});
                     } else {
-                        keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT});
+                        keylist = game.input.keyboard.addKeys({'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT});
                     }
 
 					game.camera.follow(player);
@@ -858,7 +880,8 @@
 					}
 					
 					player.body.angularVelocity = 8;
-					game.world.forEachExists(frictionCheck, this);
+                    game.world.forEachExists(frictionCheck, this);
+                    game.world.forEachExists(scriptCheck, this);
 
                     if (isChasing) {
                         game.world.forEachExists(moveTowards, this, player, 25, true);
