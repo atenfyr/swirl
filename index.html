@@ -62,7 +62,7 @@
                 let save, player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
 
 				let friction = 4;
-				let buildingMode, spinnyBoi, isChasing, dieSound, gridLock = false;
+				let buildingMode, suckable, isChasing, dieSound, gridLock = false;
                 
                 let trackList = [
                     'none',
@@ -77,11 +77,11 @@
                 
                 let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
                 
-				function goodBoi() {
+				function konamiCode() {
 					if (buildingMode) {
 						buildingMode = false;
 					}
-					spinnyBoi = true;
+					suckable = true;
 				}
 				
 				function setTrack(key) {
@@ -94,12 +94,6 @@
 					music = game.add.audio(key);
 					music.play('', 0, 0.75, true);
 					currentTrack = key;
-				}
-				
-				function oneSpinnyBoi(obj) {
-					if (obj.body) {
-						obj.body.angularVelocity = 999;
-					}
 				}
 				
 				function roundToHundredths(x) {
@@ -146,7 +140,7 @@
                     if (isChasing) {
                         return;
                     }
-					if ((obj["name"] != 'player') || spinnyBoi) {
+					if ((obj["name"] != 'player') || suckable) {
 						if (obj.body) {
 							for (var i in holes) {
 								if ((holes[i] != obj) && holes[i].alive) {
@@ -157,7 +151,7 @@
 										if (dieSound) {
 											dieAudio.play('', 0, 1);
 										}
-										if (spinnyBoi) {
+										if (suckable) {
 											obj.body.x = game.rnd.integerInRange(5, w-5);
 											obj.body.y = game.rnd.integerInRange(5, h-5);
 										} else if (obj["name"] == "hole") {
@@ -245,6 +239,7 @@
 				}
 				
 				function swirlDecode(text) {
+                    if (text.substring(0,9) === 'U1dJUkw2N') return atob(text).substring(7); // if you give it some base64 which starts with SWIRL64, it'll decode it as base64 instead
 					for (var j in saveLibrary) {
 						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0]);
 					}
@@ -305,7 +300,7 @@
                     if (result["g"][4]) {
                         game.physics.p2.restitution = result["g"][4];
                     }
-                    spinnyBoi = (result["g"][5] == 1);
+                    suckable = (result["g"][5] == 1);
                     if (result["g"][6]) {
                         game.camera.x = result["g"][6];
                         game.camera.y = result["g"][7];
@@ -738,7 +733,7 @@
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 					
-					cheet('↑ ↑ ↓ ↓ ← → ← → b a', goodBoi);
+					cheet('↑ ↑ ↓ ↓ ← → ← → b a', konamiCode);
 					cheet('d i e', function() {
 						dieSound = !dieSound;
 						dieAudio.play('', 0, 1);
@@ -1058,7 +1053,7 @@
                         if (trackNumber == -1) { trackNumber = 0; }
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
                         if (isClient) result["f"] = 1;
 
 						var b64data = swirlEncode(JSON.stringify(result));
