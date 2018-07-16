@@ -576,7 +576,7 @@
 
                 function scriptCheck(obj) {
                     if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
-                        obj.data.script();
+                        obj.data.script(obj);
                         obj.data.scriptEnabled = false;
                     } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.data.scriptEnabled = true;
