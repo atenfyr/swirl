@@ -51,7 +51,7 @@
 			window.onload = function() {
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-				let url = new URL(window.location.href);
+				let currentURL = new URL(window.location.href);
 				let defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
 				
 				let obstacles = [];
@@ -707,9 +707,9 @@
                     graphics.lineStyle(3, 0x00FF00, 1);
 
 					mobile = !(game.device.desktop);
-					if ((url.searchParams.get("mobile")) !== null) {
+					if ((currentURL.searchParams.get("mobile")) !== null) {
 						mobile = true;
-					} else if ((url.searchParams.get("desktop")) !== null) {
+					} else if ((currentURL.searchParams.get("desktop")) !== null) {
 						mobile = false;
 					}
 					
@@ -838,7 +838,7 @@
                             loadSaveData(result);
                         }
                     } else {
-                        save = url.searchParams.get("load");
+                        save = currentURL.searchParams.get("load");
                         if (save) {
                             try {
                                 result = JSON.parse(swirlDecode(save));
