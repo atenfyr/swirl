@@ -1136,7 +1136,7 @@
 									input["value"] = input["value"].slice(0, -1);
 								}
 								try {
-									resp = eval('(' + input["value"] + ')');
+									resp = eval(input["value"]);
 								} catch(err) {
                                     mode = "error";
                                     resp = err;
