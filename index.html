@@ -366,13 +366,7 @@
 				}
 
 				function resetCanvas(dontResetPlayer) {
-                    if (!dontResetPlayer) {
-                        player.kill();
-                        player.reset(w/2, h/2);
-                        game.camera.reset(w/2, h/2);
-                        game.camera.follow(player);
-                        game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
-                    }
+                    if (!dontResetPlayer) resetPlayer();
 					
 					for (var i in circles) {
 						circles[i].destroy();
@@ -1042,7 +1036,7 @@
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
                         result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
-                        result["f"] = 1;
+                        if (isClient) result["f"] = 1;
 
 						var b64data = swirlEncode(JSON.stringify(result));
                         if (isClient) {
