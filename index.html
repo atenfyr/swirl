@@ -50,7 +50,7 @@
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 				let url = new URL(window.location.href);
-				const defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
+				let defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
 				
 				let obstacles = [];
                 let circles = []
@@ -694,9 +694,9 @@
                     graphics.lineStyle(3, 0x00FF00, 1);
 
 					mobile = !(game.device.desktop);
-					if ((url.searchParams.get("mobile")) != null) {
+					if ((url.searchParams.get("mobile")) !== null) {
 						mobile = true;
-					} else if ((url.searchParams.get("desktop")) != null) {
+					} else if ((url.searchParams.get("desktop")) !== null) {
 						mobile = false;
 					}
 					
@@ -792,11 +792,12 @@
                             game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
                         }
                     } else {
-						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 65, "two fingers: save game", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 115, "this mode is mostly intended for viewing creations others have made", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 145, "please open this link on a computer to edit", {font: "25px Consolas", fill: "#FFFFFF"});
+                        defaultFont = {font: "25px Consolas", fill: "#FFFFFF"};
+						game.add.text(10, 5, "swiping in any direction: moves the tiny square", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 35, "hold for four seconds: resets character", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 65, "two fingers: save game", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 115, "this mode is mostly intended for viewing creations others have made", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 145, "please open this link on a computer to edit", defaultFont, textGroup).sendToBack();
 						game.world.setBounds(0, 0, Infinity, Infinity);
 						player.body.x = 50;
 						player.body.y = 250;
