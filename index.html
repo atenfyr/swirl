@@ -608,12 +608,29 @@
                 addScript = tieScript;
                 addFunction = tieScript;
 
+
+                let customKeys = [];
+                function registerKey(key, allowHolding, func) {
+                    customKeys.push([game.input.keyboard.addKey(Phaser.KeyCode[key] || key), allowHolding, func]);
+                }
+                defineKey = registerKey;
+                addKey = registerKey;
+                overrideKey = registerKey;
+
                 function scriptCheck(obj) {
                     if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.data.script(obj);
                         obj.data.scriptEnabled = false;
                     } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.data.scriptEnabled = true;
+                    }
+
+                    for (var i = 0; i < customKeys.length; i++) {
+                        let currentKey = customKeys[i];
+                        if (currentKey[1] && currentKey[0].isDown
+                            || !currentKey[1] && currentKey[0].justDown) {
+                            currentKey[2]();
+                        }
                     }
                 }
 				
