@@ -1110,32 +1110,28 @@
 							showCancelButton: true,
 							confirmButtonText: 'hack',
 							cancelButtonText: 'cancel'
-						}).then((a) => {
-							if (a["value"]) {
-								var resp;
-								var mode = "success";
-								if (a["value"].charAt(a["value"].length-1) == ";") {
-									a["value"] = a["value"].substring(0, a["value"].length-1);
+						}).then(input => {
+							if (input["value"]) {
+								let resp, mode = "success";
+								if (input["value"].charAt(input["value"].length-1) == ";") {
+									input["value"] = input["value"].slice(0, -1);
 								}
 								try {
-									resp = eval('(' + a["value"] + ')');
+									resp = eval('(' + input["value"] + ')');
 								} catch(err) {
-									mode = "error";
-								}
-								if (mode == "success") {
-                                    log('Ran code through console: ' + a['value']);
-									swal({
-										title: "you did a good hack",
-										html: '<textarea readonly=true rows="3" cols="40">' + resp + '</textarea>',
-										type: mode
-									}).then(() => {
-                                        game.paused = false;
-                                        game.input.keyboard.start();
-                                    });
-								} else {
+                                    mode = "error";
+                                    resp = err;
+                                }
+                                .009
+                                log('Ran code through console: ' + input['value']);
+                                swal({
+                                    title: (mode === "success")?"you did a good hack":"you did a bad hack",
+                                    html: '<textarea readonly=true rows="3" cols="40">' + resp + '</textarea>',
+                                    type: mode
+                                }).then(() => {
                                     game.paused = false;
                                     game.input.keyboard.start();
-                                }
+                                });
                             } else {
                                 game.paused = false;
                                 game.input.keyboard.start();
