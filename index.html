@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<!--
-		Uses jQuery, Phaser, cheet.js, phaser-swipe, and SweetAlert2.
-		jQuery: https://jquery.org/
+		Uses Phaser, cheet.js, phaser-swipe, and SweetAlert2.
 		Phaser: https://phaser.io/
 		cheet.js: http://lou.wtf/cheet.js/
 		phaser-swipe: https://github.com/flogvit/phaser-swipe
@@ -11,15 +10,28 @@
 	-->
     <head>
         <meta charset="UTF-8" />
-        <link rel="icon" href="favicon.ico">
         <title>Swirl</title>
-		<script src="assets/scripts/jquery-3.2.1.min.js"></script>
-		<script src="assets/scripts/phaser.min.js"></script>
-		<script src="assets/scripts/swipe.js"></script>
-		<script src="assets/scripts/cheet.min.js"></script>
+        <link rel="icon" href="icon.ico">
+        <script>
+            const debug = true;
+            const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
+
+            var fs, electron, dialog, thisWindow, isValid
+            if (isClient) {
+                fs = require('fs');
+                electron = require('electron');
+                dialog = electron.remote.dialog;
+                thisWindow = electron.remote.getCurrentWindow();
+                isValid = require('is-valid-path');
+            }
+        </script>
+
+        <script src="assets/scripts/phaser.min.js"></script>
+        <script src="assets/scripts/swipe.js"></script>
+        <script src="assets/scripts/cheet.min.js"></script>
         <script src="assets/scripts/sweetalert2.all.min.js"></script>
         <script src="assets/scripts/logger.js"></script>
-		<style>
+        <style>
 			body, .game {
 				margin: 0 auto;
 				padding: 0 auto;
@@ -29,33 +41,10 @@
 				overflow: hidden;
 				background-color: #000000;
 			}
-
-            .game {
-                border: 16px solid #666666;
-                border-top: 16px solid #ffffff;
-                border-radius: 20%;
-                width: 120px;
-                height: 120px;
-                animation: zoop 2s linear infinite;
-                top: 50%;
-                left: 50%;
-                margin-top: -60px;
-                margin-left: -60px;
-                background-color: #444444;
-            }
-
-            @keyframes zoop {
-                0% {
-                    transform: rotate(0deg); 
-                }
-                100% {
-                    transform: rotate(360deg); 
-                }
-            }
 		</style>
     </head>
     <body>
-		<div class='game'></div>
+		<div class='game' style='display: none;'></div>
         <script type="text/javascript">
 			window.onload = function() {
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -70,11 +59,9 @@
                 let objects = []; // immovable objects
                 let actions = [];
                 let lines = [];
-                let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, decodedSaveData, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics;
+                let save, player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
 
-				let debug = (url.searchParams.get("debug") != null);
-				let save = (url.searchParams.get("load"));
-				let friction = ((debug)?8:4);
+				let friction = 4;
 				let buildingMode, spinnyBoi, isChasing, dieSound, gridLock = false;
                 
                 let trackList = [
@@ -88,9 +75,7 @@
                     Logger.show();
                 }
                 
-				let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
-                $('.game').hide();
-
+                let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
                 
 				function goodBoi() {
 					if (buildingMode) {
@@ -260,17 +245,76 @@
 				}
 				
 				function swirlDecode(text) {
-					if (debug) {
-						log("Save file: " + text + "\nLength: " + text.length);
-					}
 					for (var j in saveLibrary) {
-						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0])
-					}
-					if (debug) {
-						log("Decoded save file: " + text + "\nLength: " + text.length);
+						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0]);
 					}
 					return text;
-				}
+                }
+                
+                function loadSaveData(result) {
+                    resetCanvas();
+                    for (var i in result["o"]) {
+                        if (result["o"][i]) {
+                            addNew('box', result['o'][i][0], result['o'][i][1], false, false, result['o'][i][2], result['o'][i][3]);
+                        }
+                    }
+                    for (var i in result["c"]) {
+                        if (result["c"][i]) {
+                            addNew('ball', result['c'][i][0], result['c'][i][1], false, false, result['c'][i][2], result['c'][i][3]);
+                        }
+                    }
+                    for (var i in result["d"]) {
+                        if (result["d"][i]) {
+                            addNew('cat', result['d'][i][0], result['d'][i][1], false, false, result['d'][i][2], result['d'][i][3]);
+                        }
+                    }
+                    for (var i in result["b"]) {
+                        if (result["b"][i]) {
+                            hole = game.add.sprite(result['b'][i][0], result['b'][i][1], 'blackhole');
+                            hole.name = 'hole';
+                            hole.scale.setTo(result['b'][i][2], result['b'][i][3]);
+                            game.physics.p2.enable(hole);
+                            hole.body.kinematic = true;
+                            hole.anchor.setTo(0.5, 0.5);
+                            hole.body.setCircle(hole.width/1.85);
+                            holes.push(hole);
+                        }
+                    }
+                    if (result['i']) {
+                        for (var i in result['i']) {
+                            if (result['i'][i]) {
+                                addNew('immovable object', result['i'][i][0], result['i'][i][1], false, false, result['i'][i][2], result['i'][i][3]);
+                            }
+                        }
+                    }
+                    // p = playerx, playery, playervelocityx, playervelocityy
+                    // g = friction, world width, world height, building mode (1 or 0), restitution
+                    player.body.x = result["p"][0];
+                    player.body.y = result["p"][1];
+                    player.body.velocity.x = result["p"][2];
+                    player.body.velocity.y = result["p"][3];
+                    friction = result["g"][0];
+                    if (result["g"][1]) {
+                        if (result["g"][1] == -1) {
+                            game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+                        } else {
+                            game.world.setBounds(0, 0, result["g"][1], result["g"][2]);
+                        }
+                    }
+                    buildingMode = (result["g"][3] == 1);
+                    if (result["g"][4]) {
+                        game.physics.p2.restitution = result["g"][4];
+                    }
+                    spinnyBoi = (result["g"][5] == 1);
+                    if (result["g"][6]) {
+                        game.camera.x = result["g"][6];
+                        game.camera.y = result["g"][7];
+                    }
+                    setTrack(trackList[result["g"][8]]);
+                    dieSound = (result["g"][9] == 1);
+                    gridLock = (result['g'][10] == 1);
+                    player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+                }
 				
 				function onAll(array, func) {
                     if (typeof(array) == 'object') {
@@ -352,7 +396,7 @@
                     objects = [];
                     actions = [];
                     lastAction = undefined;
-					friction = ((debug)?8:4);
+					friction = 4;
 				}
 				
 				function resetPlayer(randomly) {
@@ -369,6 +413,14 @@
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 				}
+
+                function openDeveloperTools() {
+                    if (isClient) {
+                        return thisWindow.webContents.openDevTools();
+                    }
+                    return false;
+                }
+                openDebugTools = openDeveloperTools;
 
 				function stopMusic() {
 					if (music) {
@@ -414,7 +466,7 @@
                             }
 							lastAction = game.add.sprite(atx, aty, 'circle');
 							lastAction.name = 'circle';
-							game.physics.p2.enable(lastAction, debug);
+							game.physics.p2.enable(lastAction);
 							lastAction.anchor.setTo(0.5, 0.5);
                             lastAction.body.setCircle(lastAction.width/2);
                             if (vx && vy) {
@@ -437,7 +489,7 @@
                             }
 							lastAction = game.add.sprite(atx, aty, 'box');
 							lastAction.name = 'obstacle';
-							game.physics.p2.enable(lastAction, debug);
+							game.physics.p2.enable(lastAction);
                             lastAction.body.kinematic = true;
                             if (vx && vy) {
                                 lastAction.body.velocity.x = vx;
@@ -457,7 +509,7 @@
 							lastAction = game.add.sprite(atx, aty, 'cat');
 							lastAction.name = 'cat';
 							lastAction.scale.setTo(0.4, 0.4);
-                            game.physics.p2.enable(lastAction, debug);
+                            game.physics.p2.enable(lastAction);
                             if (vx && vy) {
                                 lastAction.body.velocity.x = vx;
                                 lastAction.body.velocity.y = vy;
@@ -476,7 +528,7 @@
                             }
 							lastAction = game.add.sprite(atx, aty, 'immovable');
 							lastAction.name = 'object';
-							game.physics.p2.enable(lastAction, debug);
+							game.physics.p2.enable(lastAction);
                             lastAction.body.kinematic = true;
                             if (vx && vy) {
                                 lastAction.body.velocity.x = vx;
@@ -497,7 +549,7 @@
                             lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
                             lastAction.name = 'hole';
                             lastAction.scale.setTo(0.055, 0.055);
-                            game.physics.p2.enable(lastAction, debug);
+                            game.physics.p2.enable(lastAction);
                             lastAction.body.kinematic = true;
                             lastAction.anchor.setTo(0.5, 0.5);
                             lastAction.body.setCircle(lastAction.width/1.85);
@@ -649,20 +701,24 @@
 					}
 					
 					dieAudio = game.add.audio('die');
+                    this.swipe = new Swipe(this.game);
 					
-					this.swipe = new Swipe(this.game);
 					game.world.setBounds(0, 0, w+1, h+1);					
 					game.physics.startSystem(Phaser.Physics.P2JS);
 					game.stage.backgroundColor = '#404040';
 										
 					player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
 					player.name = 'player';
-					game.physics.p2.enable(player, debug);
+					game.physics.p2.enable(player);
 					
 					game.physics.p2.restitution = 1.5;
 
-					keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT });
-					
+                    if (isClient) {
+					    keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT, 'fullscreen': Phaser.KeyCode.F12, 'refreshPage': Phaser.KeyCode.F5, 'loadSave': Phaser.KeyCode.M});
+                    } else {
+                        keylist = game.input.keyboard.addKeys({ 'undo': Phaser.KeyCode.DELETE, 'vacuum': Phaser.KeyCode.ONE, 'gridlock': Phaser.KeyCode.V, 'object': Phaser.KeyCode.Z, 'hole': Phaser.KeyCode.X, 'preset': Phaser.KeyCode.Y, 'unstuck': Phaser.KeyCode.H, 'toggle': Phaser.KeyCode.T, 'save': Phaser.KeyCode.U, 'easter': Phaser.KeyCode.C, 'expand': Phaser.KeyCode.P, 'friction': Phaser.KeyCode.F, 'friction2': Phaser.KeyCode.G, 'run': Phaser.KeyCode.TILDE, 'move': Phaser.KeyCode.Q, 'move2': Phaser.KeyCode.E, 'reset': Phaser.KeyCode.R, 'speed1': Phaser.KeyCode.I, 'speed2': Phaser.KeyCode.J, 'speed3': Phaser.KeyCode.K, 'speed4': Phaser.KeyCode.L, 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D, 'up2': Phaser.KeyCode.UP, 'down2': Phaser.KeyCode.DOWN, 'left2': Phaser.KeyCode.LEFT, 'right2': Phaser.KeyCode.RIGHT});
+                    }
+
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 					
@@ -673,9 +729,6 @@
 					});
 					cheet('w i i', function() {
 						setTrack('mii');
-					});
-					cheet('c h a o s', function() {
-						window.location.href = "https://atenfyr.github.io/swirl/?load=YoE819M331J824M352J1120M267J1207M438J293M342J1170M396J1083M328J473M396J565M448J662M430J590M419J739M396J440M645J1267M531J658M411J771M512J911M521J653M444J767M427J686M473J629M478J963M524J1357M172J950M554J748M466J758M464J702M501J439M739J1168M505J1517M874J1134M428J788M492J833M263J536M60J1169M476J479M650J793M376J903M229J748M694J758M426J712M541J922M299JP37M416J547M413J944M389J911M610J1174M371JP28M251J122M123J835M374J880M494J1074M624JP156MP68J659M249J1071M319J809M11J759M114J689M175J1212MP149J782M137J987M98J883M163J825M156J656M538J549M420J725M362J726M410J523M572J1465M273J350M120J1574M191J708M476J261M400J736M474J468M240J792M394J760M382J1513M204J1298M592J713M591J741M414J792M403J740M430J740M270J692M439J654M424J711M455J647M401J1067M598J707M478J910M639J586M404J1111M464J1078M727J554M485J547M468J542M448J512M386J397M290J603M138J396M385J299M430J351M523J603M642J1016MP47J412M277J572M481J702M462J186M267J73M411J779M264J1081M341J405M499J206M515J873M319J850M314J821M298J793M263J770M239J686M189J691M211J697M236J626M235J521M158J518M188J517M218J511M280J419M154J415M184J411M220J405M252J352M246J311M203J312M172J303M144J255M236J204M237J205M205J196M174J203M138J126M156J118M187J109M224J62M223J82M145J36M148JP5M142J17M182JP6M212J34M210JP17M249JP25M278J15M299J61M301J109M301UMcE727M940M2756M4633MP1MP1J517M843M16680MP13475M9M0UMdNMbE624M316M0D06M0D06UMpB1229M33MP366MP322CMgB4M2049M1047M0M1D5M1M172M0M1M1R";
 					});
                     cheet(', .', function() {
                         if (isChasing || hasWon) {
@@ -689,14 +742,16 @@
                         if (music) {
                             music.stop();
                         }
-                        onAll(function(sprite) { // make all pre-existing sprites dangerous
-                            if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
-                                sprite.tint = 0xFF0000;
-                                sprite.name = 'dangerous';
-                                sprite.body.dynamic = true;
-                                game.physics.p2.enable(sprite, debug);
-                            }
-                        });
+                        if (!disableTransform) {
+                            onAll(function(sprite) { // make all pre-existing sprites dangerous
+                                if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
+                                    sprite.tint = 0xFF0000;
+                                    sprite.name = 'dangerous';
+                                    sprite.body.dynamic = true;
+                                    game.physics.p2.enable(sprite);
+                                }
+                            });
+                        }
                         lives = 5;
                         tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
                         livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
@@ -725,123 +780,74 @@
                         game.add.text(5, 235, "G: decreases friction", defaultFont, textGroup).sendToBack();
                         game.add.text(5, 255, "T: toggle building mode", defaultFont, textGroup).sendToBack();
                         game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 295, "U: save current game state", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 335, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
-					} else {
+                        if (!isClient) {
+                            game.add.text(5, 295, "U: save current game state", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 335, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
+                        } else {
+                            game.add.text(5, 295, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 315, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 345, "U: save current game state", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 365, "M: load save data", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
+                        }
+                    } else {
 						game.add.text(10, 5, "swiping in any direction: moves the tiny square", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 35, "hold for four seconds: resets character", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.add.text(10, 65, "two fingers: save game", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 115, "this mode is mostly intended for viewing others' creations", {font: "25px Consolas", fill: "#FFFFFF"});
-						game.add.text(10, 145, "please open this link on a laptop or desktop to edit the grid", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 115, "this mode is mostly intended for viewing creations others have made", {font: "25px Consolas", fill: "#FFFFFF"});
+						game.add.text(10, 145, "please open this link on a computer to edit", {font: "25px Consolas", fill: "#FFFFFF"});
 						game.world.setBounds(0, 0, Infinity, Infinity);
 						player.body.x = 50;
 						player.body.y = 250;
-					}
+                    }
 
 					
 					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.parentIsWindow = true;
-					
-					if (save) {
-						var result;
-						var didErr = false;
-						try {
-							result = JSON.parse(swirlDecode(save));
-						} catch(err) {
-							didErr = true;
-						}
-						if (didErr || !result) {
-							game.paused = true;
-							game.input.keyboard.stop();
-							swal({
-								type: 'error',
-								title: 'Corrupted Save',
-								text: 'The save file you have attempted to load is corrupted or invalid.'
-							}).then(() => {
-								game.paused = false;
-								game.input.keyboard.start();
-							});
-						} else {
-                            decodedSaveData = JSON.stringify(result);
-							for (var i in result["o"]) {
-								if (result["o"][i]) {
-                                    addNew('box', result['o'][i][0], result['o'][i][1], false);
-								}
-							}
-							for (var i in result["c"]) {
-								if (result["c"][i]) {
-                                    addNew('ball', result['c'][i][0], result['c'][i][1], false);
-								}
-							}
-							for (var i in result["d"]) {
-								if (result["d"][i]) {
-                                    addNew('cat', result['d'][i][0], result['d'][i][1], false);
-								}
-							}
-                            for (var i in result["b"]) {
-                                if (result["b"][i]) {
-                                    hole = game.add.sprite(result['b'][i][0], result['b'][i][1], 'blackhole');
-                                    hole.name = 'hole';
-                                    hole.scale.setTo(result['b'][i][2], result['b'][i][3]);
-                                    game.physics.p2.enable(hole, debug);
-                                    hole.body.kinematic = true;
-                                    hole.anchor.setTo(0.5, 0.5);
-                                    hole.body.setCircle(hole.width/1.85);
-                                    holes.push(hole);
-                                }
-                            }
-                            if (result['i']) {
-                                for (var i in result['i']) {
-                                    if (result['i'][i]) {
-                                        addNew('immovable object', result['i'][i][0], result['i'][i][1], false);
-                                    }
-							    }
-                            }
-							// p = playerx, playery, playervelocityx, playervelocityy
-							// g = friction, world width, world height, building mode (1 or 0), restitution
-							player.body.x = result["p"][0];
-							player.body.y = result["p"][1];
-							player.body.velocity.x = result["p"][2];
-							player.body.velocity.y = result["p"][3];
-							friction = result["g"][0];
-							if (result["g"][1]) {
-								if (result["g"][1] == -1) {
-									game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-								} else {
-									game.world.setBounds(0, 0, result["g"][1], result["g"][2]);
-								}
-							}
-							buildingMode = (result["g"][3] == 1);
-							if (result["g"][4]) {
-								game.physics.p2.restitution = result["g"][4];
-							}
-							spinnyBoi = (result["g"][5] == 1);
-							if (result["g"][6]) {
-								game.camera.x = result["g"][6];
-								game.camera.y = result["g"][7];
-							}
-							setTrack(trackList[result["g"][8]]);
-                            dieSound = (result["g"][9] == 1);
-                            gridLock = (result['g'][10] == 1);
-                            player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 
-                            if (result['f'] == 1) {
+                    let result, didErr = false;
+                    if (isClient) {
+                        if (electron.remote.process.argv[1] && isValid(electron.remote.process.argv[1]) && !fs.lstatSync(electron.remote.process.argv[1]).isDirectory()) {
+                            save = fs.readFileSync(electron.remote.process.argv[1], 'utf-8');
+                        }
+
+                        try {
+                            result = JSON.parse(swirlDecode(save));
+                        } catch(err) {
+                            didErr = true;
+                        }
+
+                        if (!didErr && result) {
+                            loadSaveData(result);
+                        }
+                    } else {
+                        save = url.searchParams.get("load");
+                        if (save) {
+                            try {
+                                result = JSON.parse(swirlDecode(save));
+                            } catch(err) {
+                                didErr = true;
+                            }
+
+                            if (!didErr && result) {
+                                loadSaveData(result);
+                            } else {
                                 game.paused = true;
                                 game.input.keyboard.stop();
                                 swal({
-                                    type: 'warning',
-                                    title: 'Unstable Save',
-                                    text: 'This save file was generated with the Swirl Desktop Client, and may not be stable.'
+                                    type: 'error',
+                                    title: 'Corrupted Save',
+                                    text: 'The save file you have attempted to load is corrupted or invalid.'
                                 }).then(() => {
                                     game.paused = false;
                                     game.input.keyboard.start();
                                 });
                             }
-						}
-					}
-				}
+                        }
+                    }
+                }
 
 				function update() {
 					if (holes.length > 0) {
@@ -851,7 +857,7 @@
 					if (player.body == null) {
 						player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
 						player.name = 'player';
-						game.physics.p2.enable(player, debug);
+						game.physics.p2.enable(player);
 						game.physics.p2.restitution = 1.5;
 						player.kill();
 					}
@@ -862,7 +868,7 @@
                     if (isChasing) {
                         game.world.forEachExists(moveTowards, this, player, 25, true);
                         game.world.forEachExists(isChasingLoop, this);
-                        onAll('black holes', function(hole) {
+                        onAll('hole', function(hole) {
                             if (actions.length >= 0 && hole.visible && hole.exists) {
                                 let randomAction = actions[game.rnd.integerInRange(0, actions.length-1)];
                                 if (randomAction.body && (Phaser.Math.distance(randomAction.x, randomAction.y, hole.x, hole.y) <= 300) && !lines[randomAction] && randomAction.exists && randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 20) == 1) {
@@ -912,7 +918,7 @@
                                 lastAction.tint = 0xFF0000;
                                 lastAction.name = 'dangerous';
                                 lastAction.body.dynamic = true;
-                                game.physics.p2.enable(lastAction, debug);
+                                game.physics.p2.enable(lastAction);
                             }
                         }
                     }
@@ -923,8 +929,8 @@
 						player.body.velocity.x = 0;
 						player.body.velocity.y = 0;
 					}
-					
-					if (mobile) {
+
+                    if (mobile) {
 						buildingMode = false;
 						var direction = this.swipe.check();
 						if (direction !== null) {
@@ -998,12 +1004,11 @@
                         gridLock = !gridLock;
                         player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
-						game.paused = true;
-						let result = {};
+                        let result = {};
 						result["o"] = [];
 						for (var i in obstacles) {
 							if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
-								result["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y)]);
+								result["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y), Math.floor(obstacles[i].body.velocity.x), Math.floor(obstacles[i].body.velocity.y)]);
 							}
 						}
 						result["c"] = [];
@@ -1027,7 +1032,7 @@
 						result['i'] = [];
 						for (var i in objects) {
 							if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
-								result['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y)]);
+								result['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y), Math.floor(objects[i].body.velocity.x), Math.floor(objects[i].body.velocity.y)]);
 							}
 						}
 						
@@ -1036,26 +1041,44 @@
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
                         result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((spinnyBoi)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
-                        
-						var b64data = swirlEncode(JSON.stringify(result));
-                        decodedSaveData = JSON.stringify(result);
+                        result["f"] = 1;
 
-						var prefix = "https://atenfyr.github.io/swirl/"
-						if (debug) {
-							prefix = prefix + "?debug&load="
-						} else {
-							prefix = prefix + "?load="
-						}
-						game.input.keyboard.stop();
-						swal({
-							type: 'success',
-							title: 'Saved',
-							html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">' + prefix + b64data + '</textarea>'
-						}).then(() => {
-							game.paused = false;
-							game.input.keyboard.start();
-						});
+						var b64data = swirlEncode(JSON.stringify(result));
+                        if (isClient) {
+                            dialog.showSaveDialog({"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
+                                if (savePath) {
+                                    fs.writeFileSync(savePath, b64data, 'utf-8');
+                                }
+                            });
+                        } else {
+                            var prefix = "https://atenfyr.github.io/swirl/?load="
+                            game.input.keyboard.stop();
+                            swal({
+                                type: 'success',
+                                title: 'Saved',
+                                html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">' + prefix + b64data + '</textarea>'
+                            }).then(() => {
+                                game.paused = false;
+                                game.input.keyboard.start();
+                            });
+                        }
 					}
+
+                    if (isClient) {
+                        if (keylist.fullscreen.justDown) {
+                            thisWindow.setFullScreen(!(thisWindow.isFullScreen()));
+                            thisWindow.reload();
+                        } else if (keylist.refreshPage.justDown) {
+                            thisWindow.reload();
+                        } else if (keylist.loadSave.justDown) {
+                            dialog.showOpenDialog({"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(loadPath) {
+                                if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
+                                    let thisData = fs.readFileSync(loadPath[0], 'utf-8');
+                                    loadSaveData(JSON.parse(swirlDecode(thisData)));
+                                }
+                            });
+                        }
+                    }
 					
 					if (keylist.move.justDown && player.alive) {
 						addNew('box', player.x, player.y, gridLock);
@@ -1064,7 +1087,7 @@
 						player.body.y -= 10;
 					}
 					
-					if (keylist.hole.justDown && player.alive) {
+					if ((keylist.hole.justDown && player.alive) || (cheatMode && isChasing && keylist.hole.isDown && player.alive)) {
 						addNew('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
 						addNew('ball', player.x, player.y, gridLock);

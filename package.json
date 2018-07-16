@@ -1,0 +1,34 @@
+{
+  "name": "Swirl",
+  "version": "0.1.0",
+  "description": "A sandbox game that allows you to create and save structures with boxes, circles, and more.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.electron.swirl",
+    "productName": "Swirl",
+    "copyright": "Copyright © 2018 Atenfyr",
+    "win": {
+      "fileAssociations": [
+        {
+          "ext": ".swirl"
+        }
+      ]
+    },
+    "nsis": {
+      "perMachine": true,
+      "createDesktopShortcut": false
+    }
+  },
+  "author": "Atenfyr",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "2.0.0"
+  },
+  "dependencies": {
+    "is-valid-path": "^0.1.1"
+  }
+}
