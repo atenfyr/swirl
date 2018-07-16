@@ -611,11 +611,17 @@
 
                 let customKeys = [];
                 function registerKey(key, allowHolding, func) {
-                    customKeys.push([game.input.keyboard.addKey(Phaser.KeyCode[key] || key), allowHolding, func]);
+                    key = Phaser.KeyCode[key] || key;
+                    customKeys.push([game.input.keyboard.addKey(key), allowHolding, func]);
+                    Object.keys(keylist).forEach(function(k) {
+                        if (keylist[k]['keyCode'] === key) {
+                            keylist[k] = {justDown:false,isDown:false}
+                        }
+                    });
                 }
                 defineKey = registerKey;
-                addKey = registerKey;
                 overrideKey = registerKey;
+                addKey = registerKey;
 
                 function scriptCheck(obj) {
                     if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
