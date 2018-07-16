@@ -30,9 +30,6 @@
   },
   "author": "Atenfyr",
   "license": "MIT",
-  "devDependencies": {
-    "electron": "2.0.0"
-  },
   "dependencies": {
     "is-valid-path": "^0.1.1"
   }
