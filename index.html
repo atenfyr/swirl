@@ -16,11 +16,9 @@
             const debug = false;
             const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
 
-            var fs, url, path, electron, dialog, thisWindow, isValid; // please don't override these in the debug console
+            var fs, electron, dialog, thisWindow, isValid; // please don't override these in the debug console
             if (isClient) {
                 fs = require('fs');
-                url = require('url');
-                path = require('path');
                 electron = require('electron');
                 dialog = electron.remote.dialog;
                 thisWindow = electron.remote.getCurrentWindow();
