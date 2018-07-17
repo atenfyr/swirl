@@ -10,8 +10,14 @@
 	-->
     <head>
         <meta charset="UTF-8" />
-        <title>Swirl</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: 'unsafe-inline' 'unsafe-eval'">
         <link rel="icon" href="icon.ico">
+        <title>Swirl</title>
+        <script src="assets/scripts/phaser.min.js"></script>
+        <script src="assets/scripts/swipe.js"></script>
+        <script src="assets/scripts/cheet.min.js"></script>
+        <script src="assets/scripts/sweetalert2.all.min.js"></script>
+        <script src="assets/scripts/logger.js"></script>
         <script>
             const debug = false;
             const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
@@ -25,12 +31,6 @@
                 isValid = require('is-valid-path');
             }
         </script>
-
-        <script src="assets/scripts/phaser.min.js"></script>
-        <script src="assets/scripts/swipe.js"></script>
-        <script src="assets/scripts/cheet.min.js"></script>
-        <script src="assets/scripts/sweetalert2.all.min.js"></script>
-        <script src="assets/scripts/logger.js"></script>
         <style>
 			body, .game {
 				margin: 0 auto;
@@ -50,8 +50,8 @@
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 				let currentURL = new URL(window.location.href);
-				let defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
-				
+                let defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
+                				
 				let obstacles = [];
                 let circles = []
                 let cats = [];
@@ -115,14 +115,14 @@
                 function isChasingLoop(obj) {
                     if (obj.name == 'dangerous' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.destroy();
-                        new Audio('assets/audio/beep.mp3').play();
-                        if (lives == 1) { // the lives are subtracted after the check, so if lives is 1 then when it would drop later it would be 0
+                        new Audio('assets/audio/beep.mp3').play(); // we're not using phaser's audio system here because the game is permanently paused at zero lives, meaning it wouldn't play the sound
+                        lives--;
+                        if (lives === 0) {
                             livesText.setText('0 lives remaining');
                             game.paused = true;
                             game.input.keyboard.stop();
                             return;
                         } else {
-                            lives--;
                             resetPlayer(true);
                             switch(lives) {
                                 case 1:
@@ -177,6 +177,7 @@
 				}
 
 				function preload() {
+                    console.log("%cHave you tried pressing the tilde key?", "font-size: 14pt");
 					game.load.image('player', 'assets/images/player.png');
 					game.load.image('box', 'assets/images/box.png');
 					game.load.image('circle', 'assets/images/circle.png');
