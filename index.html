@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 	<!--
-		Uses Phaser, cheet.js, phaser-swipe, SweetAlert2, and Logger.js.
-		Phaser: https://phaser.io/
+		Uses Phaser, phaser-swipe, cheet.js, SweetAlert2, and Logger.js.
+        Phaser: https://phaser.io/
+        phaser-swipe: https://github.com/flogvit/phaser-swipe
 		cheet.js: http://lou.wtf/cheet.js/
-		phaser-swipe: https://github.com/flogvit/phaser-swipe
         SweetAlert2: https://limonte.github.io/sweetalert2/
         Logger.js: http://www.songho.ca/misc/logger/logger.html
 	-->
@@ -19,10 +19,8 @@
         <script src="assets/scripts/sweetalert2.all.min.js"></script>
         <script src="assets/scripts/logger.js"></script>
         <script>
-            const debug = false;
             const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
-
-            var fs, electron, dialog, thisWindow, isValid; // please don't override these in the debug console
+            var fs, electron, dialog, thisWindow, isValid; // please don't override these
             if (isClient) {
                 fs = require('fs');
                 electron = require('electron');
@@ -30,6 +28,8 @@
                 thisWindow = electron.remote.getCurrentWindow();
                 isValid = require('is-valid-path');
             }
+
+            const debug = ((isClient && electron.remote.process.argv[2] === 'debug')?true:false);
         </script>
         <style>
 			body, .game {
@@ -173,7 +173,7 @@
 				}
 
 				function preload() {
-                    console.log("%cHave you tried pressing the tilde key?", "font-size: 14pt");
+                    console.log("%cTry pressing the tilde key!", "font-size: 14pt");
 					game.load.image('player', 'assets/images/player.png');
 					game.load.image('box', 'assets/images/box.png');
 					game.load.image('circle', 'assets/images/circle.png');
@@ -258,9 +258,10 @@
                     }
 
                     if (save[1]) {
-                        console.log(save[1]);
                         try {
-                            eval(atob(save[1]));
+                            let d = atob(save[1]);
+                            log(d);
+                            eval(d);
                         } catch(err) {
                             game.paused = true;
                             game.input.keyboard.stop();
@@ -1177,7 +1178,7 @@
 						game.input.keyboard.stop();
 						swal({
 							title: "hacking skills",
-							html: "not quite as leet as <a href='https://www.youtube.com/watch?v=o0Z0Jo1tlmI' target='_blank'>this guy</a> though",
+							html: "don't put anything here if you don't know what you're doing",
 							input: "text",
 							showCancelButton: true,
 							confirmButtonText: 'hack',
