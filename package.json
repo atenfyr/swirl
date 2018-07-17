@@ -6,7 +6,7 @@
   "postinstall": "electron-builder install-app-deps",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "make": "electron-builder"
   },
   "repository": {
     "type": "git",
