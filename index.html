@@ -416,7 +416,7 @@
                     setTrack(trackList[result["g"][8]]);
                     dieSound = (result["g"][9] == 1);
                     gridLock = (result['g'][10] == 1);
-                    player.tint = gridLock?'0xADD8E6':'0xfff';
+                    player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
                 }
 				
 				function onAll(array, func) {
@@ -1182,7 +1182,7 @@
 						buildingMode = !(buildingMode);
                     } else if (keylist.gridlock.justDown && !(keylist.gridlock.ctrlKey)) {
                         gridLock = !gridLock;
-                        player.tint = gridLock?'0xADD8E6':'0xfff';
+                        player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
                         let result = {};
 						result["o"] = [];
