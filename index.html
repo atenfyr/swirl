@@ -76,7 +76,52 @@
                 }
                 
                 let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
-                
+
+                document.addEventListener('dragover', function(e){
+                    e.stopPropagation();
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                });
+
+                document.addEventListener('drop', function(e){
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    let files = e.dataTransfer.files;
+                    if (files && files[0] && files[0].name) {
+                        var reader = new FileReader();
+                        reader.onload = function(e2) {
+                            let thisData = e2.target.result;
+                            let fileExtension = files[0].name.split('.').pop();
+                            if (fileExtension === 'swirl') {
+                                clientLoadSave(thisData);
+                            } else {
+                                try {
+                                    eval(thisData);
+                                } catch(err) {
+                                    game.paused = true;
+                                    game.input.keyboard.stop();
+                                    swal({
+                                        title: 'Error in Script',
+                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                        type: 'error'
+                                    }).then(() => {
+                                        game.paused = false;
+                                        game.input.keyboard.start();
+                                    });
+                                }
+                            }
+                        }
+                        reader.readAsText(files[0]);
+                    }
+
+                    if (e.dataTransfer.items) {
+                        e.dataTransfer.items.clear();
+                    } else {
+                        e.dataTransfer.clearData();
+                    }
+                });
+
 				function konamiCode() {
 					if (buildingMode) {
 						buildingMode = false;
@@ -247,8 +292,6 @@
                 }
 
                 function clientLoadSave(data) {
-                    if (!isClient) return false;
-
                     let result, didErr = false;
                     let save = data.split('\n');
                     try {
@@ -261,7 +304,7 @@
                         loadSaveData(result);
                     }
 
-                    if (save[1]) {
+                    if (save[1] && isClient) {
                         game.paused = true;
                         game.input.keyboard.stop();
                         swal({
@@ -292,7 +335,22 @@
                                 }
                             }
                         });
-
+                    } else if (save[1]) {
+                        try {
+                            let d = swirlB64Decode(save[1]);
+                            eval(d);
+                        } catch(err) {
+                            game.paused = true;
+                            game.input.keyboard.stop();
+                            swal({
+                                title: 'Error in Script',
+                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                type: 'error'
+                            }).then(() => {
+                                game.paused = false;
+                                game.input.keyboard.start();
+                            });
+                        }
                     }
                 }
                 
@@ -805,7 +863,7 @@
                     }
 				}
 				
-				function create() {
+				function create() {         
                     countdown = game.time.create();
                     countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, endTimer, this);
                     graphics = game.add.graphics(0, 0);
@@ -890,7 +948,26 @@
 
                     if (isClient) {
                         if (electron.remote.process.argv[1] && isValid(electron.remote.process.argv[1]) && !fs.lstatSync(electron.remote.process.argv[1]).isDirectory()) {
-                            clientLoadSave(fs.readFileSync(electron.remote.process.argv[1], 'utf-8'));
+                            let thisData = fs.readFileSync(electron.remote.process.argv[1], 'utf-8');
+                            let fileExtension = electron.remote.process.argv[1].split('.').pop();
+                            if (fileExtension === 'swirl') {
+                                clientLoadSave(thisData);
+                            } else {
+                                try {
+                                    eval(thisData);
+                                } catch(err) {
+                                    game.paused = true;
+                                    game.input.keyboard.stop();
+                                    swal({
+                                        title: 'Error in Script',
+                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                        type: 'error'
+                                    }).then(() => {
+                                        game.paused = false;
+                                        game.input.keyboard.start();
+                                    });
+                                }
+                            }
                         }
                     } else {
                         let result, didErr = false;
@@ -1160,10 +1237,28 @@
                         } else if (keylist.refreshPage.justDown) {
                             thisWindow.reload();
                         } else if (keylist.loadSave.justDown) {
-                            dialog.showOpenDialog({"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(loadPath) {
+                            dialog.showOpenDialog({"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name":"JavaScript", "extensions":["js"]}]}, function(loadPath) {
                                 if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
                                     let thisData = fs.readFileSync(loadPath[0], 'utf-8');
-                                    clientLoadSave(thisData);
+                                    let fileExtension = loadPath[0].split('.').pop();
+                                    if (fileExtension === 'swirl') {
+                                        clientLoadSave(thisData);
+                                    } else {
+                                        try {
+                                            eval(thisData);
+                                        } catch(err) {
+                                            game.paused = true;
+                                            game.input.keyboard.stop();
+                                            swal({
+                                                title: 'Error in Script',
+                                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                                type: 'error'
+                                            }).then(() => {
+                                                game.paused = false;
+                                                game.input.keyboard.start();
+                                            });
+                                        }
+                                    }
                                 }
                             });
                         }
