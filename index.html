@@ -601,10 +601,6 @@
                     obj.data.script = func;
                     obj.data.scriptEnabled = true;
                 }
-                tieFunction = tieScript;
-                addScript = tieScript;
-                addFunction = tieScript;
-
 
                 let customKeys = [];
                 function registerKey(key, allowHolding, func) {
@@ -616,9 +612,6 @@
                         }
                     });
                 }
-                defineKey = registerKey;
-                overrideKey = registerKey;
-                addKey = registerKey;
 
                 function scriptCheck(obj) {
                     if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
