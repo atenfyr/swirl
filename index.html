@@ -50,7 +50,7 @@
 				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 				let currentURL = new URL(window.location.href);
-                let defaultFont = {font: "15px Consolas", fill: "#FFFFFF"};
+                let defaultFont = {font: "15px Consolas", fill: "#fff"};
                 				
 				let obstacles = [];
                 let circles = []
@@ -85,12 +85,10 @@
 				}
 				
 				function setTrack(key) {
-                    if (key == 'none' || !key) { 
+					if (music) music.stop();
+                    if (key === 'none' || !key) { 
                         return; 
                     }
-					if (music) {
-						music.stop();
-					}
 					music = game.add.audio(key);
 					music.play('', 0, 0.75, true);
 					currentTrack = key;
@@ -342,7 +340,7 @@
                     setTrack(trackList[result["g"][8]]);
                     dieSound = (result["g"][9] == 1);
                     gridLock = (result['g'][10] == 1);
-                    player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+                    player.tint = gridLock?'0xADD8E6':'0xfff';
                 }
 				
 				function onAll(array, func) {
@@ -823,8 +821,8 @@
                         }
                         lives = 5;
                         tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
-                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#FFFFFF"});
-                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#FFFFFF"});
+                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#fff"});
+                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#fff"});
                         countdown.start();
                         textGroup.visible = false;
                         game.add.audio('glass').play('', 0, 0.75);
@@ -861,7 +859,7 @@
                             game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
                         }
                     } else {
-                        defaultFont = {font: "25px Consolas", fill: "#FFFFFF"};
+                        defaultFont = {font: "25px Consolas", fill: "#fff"};
 						game.add.text(10, 5, "swiping in any direction: moves the tiny square", defaultFont, textGroup).sendToBack();
 						game.add.text(10, 35, "hold for four seconds: resets character", defaultFont, textGroup).sendToBack();
 						game.add.text(10, 65, "two fingers: save game", defaultFont, textGroup).sendToBack();
@@ -1080,7 +1078,7 @@
 						buildingMode = !(buildingMode);
                     } else if (keylist.gridlock.justDown && !(keylist.gridlock.ctrlKey)) {
                         gridLock = !gridLock;
-                        player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+                        player.tint = gridLock?'0xADD8E6':'0xfff';
 					} else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
                         let result = {};
 						result["o"] = [];
