@@ -395,9 +395,7 @@
                     }
 				}
 
-				function resetCanvas(dontResetPlayer) {
-                    if (!dontResetPlayer) resetPlayer();
-					
+				function resetCanvas() {
 					for (var i in circles) {
 						circles[i].destroy();
 					}
@@ -714,7 +712,49 @@
 							}	
 						}
 					}
-				}
+                }
+                
+                function showText() {
+                    textGroup.removeAll(true);
+					if (!mobile) {
+						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 45, "Q: summons a box", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 65, "E: summons a ball", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 85, "DEL: undo the previous action", defaultFont, textGroup).sendToBack();
+						game.add.text(5, 105, "R: resets the canvas", defaultFont, textGroup).sendToBack();
+						
+                        game.add.text(5, 135, "C: summons a cat", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 155, "X: summons a black hole", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 175, "Z: summons an immovable object", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 195, "P: remove world borders", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 215, "F: increases friction", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 235, "G: decreases friction", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 255, "T: toggle building mode", defaultFont, textGroup).sendToBack();
+                        game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont, textGroup).sendToBack();
+                        if (!isClient) {
+                            game.add.text(5, 295, "U: save current game state", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 335, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
+                        } else {
+                            game.add.text(5, 295, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 315, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 345, "U: save current game state", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 365, "M: load save data", defaultFont, textGroup).sendToBack();
+                            game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
+                        }
+                    } else {
+                        defaultFont = {font: "25px Consolas", fill: "#fff"};
+						game.add.text(10, 5, "swiping in any direction: moves the tiny square", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 35, "hold for four seconds: resets character", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 65, "two fingers: save game", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 115, "this mode is mostly intended for viewing creations others have made", defaultFont, textGroup).sendToBack();
+						game.add.text(10, 145, "please open this link on a computer to edit", defaultFont, textGroup).sendToBack();
+						game.world.setBounds(0, 0, Infinity, Infinity);
+						player.body.x = 50;
+						player.body.y = 250;
+                    }
+                }
 
                 function endTimer() {
                     countdown.stop();
@@ -823,45 +863,7 @@
 					game.camera.follow(player);
 					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
 
-					if (!mobile) {
-						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont, textGroup).sendToBack();
-						game.add.text(5, 25, "IJKL: increases momentum in the four cardinal directions", defaultFont, textGroup).sendToBack();
-						game.add.text(5, 45, "Q: summons a box", defaultFont, textGroup).sendToBack();
-						game.add.text(5, 65, "E: summons a ball", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 85, "DEL: undo the previous action", defaultFont, textGroup).sendToBack();
-						game.add.text(5, 105, "R: resets the canvas", defaultFont, textGroup).sendToBack();
-						
-                        game.add.text(5, 135, "C: summons a cat", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 155, "X: summons a black hole", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 175, "Z: summons an immovable object", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 195, "P: remove world borders", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 215, "F: increases friction", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 235, "G: decreases friction", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 255, "T: toggle building mode", defaultFont, textGroup).sendToBack();
-                        game.add.text(5, 275, "V: lock objects to grid upon summon", defaultFont, textGroup).sendToBack();
-                        if (!isClient) {
-                            game.add.text(5, 295, "U: save current game state", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 315, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 335, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
-                        } else {
-                            game.add.text(5, 295, "H: move the tiny square a little bit to make it unstuck", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 315, "Y: reset the tiny square", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 345, "U: save current game state", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 365, "M: load save data", defaultFont, textGroup).sendToBack();
-                            game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
-                        }
-                    } else {
-                        defaultFont = {font: "25px Consolas", fill: "#fff"};
-						game.add.text(10, 5, "swiping in any direction: moves the tiny square", defaultFont, textGroup).sendToBack();
-						game.add.text(10, 35, "hold for four seconds: resets character", defaultFont, textGroup).sendToBack();
-						game.add.text(10, 65, "two fingers: save game", defaultFont, textGroup).sendToBack();
-						game.add.text(10, 115, "this mode is mostly intended for viewing creations others have made", defaultFont, textGroup).sendToBack();
-						game.add.text(10, 145, "please open this link on a computer to edit", defaultFont, textGroup).sendToBack();
-						game.world.setBounds(0, 0, Infinity, Infinity);
-						player.body.x = 50;
-						player.body.y = 250;
-                    }
-
+                    showText();
 					
 					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
 					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
