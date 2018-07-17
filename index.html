@@ -47,8 +47,8 @@
 		<div class='game' style='display: none;'></div>
         <script type="text/javascript">
 			window.onload = function() {
-				let w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-				let h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+				let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+				let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 				let currentURL = new URL(window.location.href);
                 let defaultFont = {font: "15px Consolas", fill: "#fff"};
                 				
@@ -75,84 +75,19 @@
                     Logger.show();
                 }
                 
-                let game = new Phaser.Game(w+1, h+1, Phaser.CANVAS, 'game', { preload, create, update, render});
+                let game = new Phaser.Game(W, H, Phaser.CANVAS, 'game', {preload, create, update, render});
+				
+				function roundToHundredths(x) {
+					return Math.round(100*x)/100;
+                }
 
-                document.addEventListener('dragover', function(e){
-                    e.stopPropagation();
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'copy';
-                });
-
-                document.addEventListener('drop', function(e){
-                    e.stopPropagation();
-                    e.preventDefault();
-                    
-                    let files = e.dataTransfer.files;
-                    if (files && files[0] && files[0].name) {
-                        var reader = new FileReader();
-                        reader.onload = function(e2) {
-                            let thisData = e2.target.result;
-                            let fileExtension = files[0].name.split('.').pop();
-                            if (fileExtension === 'swirl') {
-                                clientLoadSave(thisData);
-                            } else {
-                                try {
-                                    eval(thisData);
-                                } catch(err) {
-                                    game.paused = true;
-                                    game.input.keyboard.stop();
-                                    swal({
-                                        title: 'Error in Script',
-                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                        type: 'error'
-                                    }).then(() => {
-                                        game.paused = false;
-                                        game.input.keyboard.start();
-                                    });
-                                }
-                            }
-                        }
-                        reader.readAsText(files[0]);
-                    }
-
-                    if (e.dataTransfer.items) {
-                        e.dataTransfer.items.clear();
-                    } else {
-                        e.dataTransfer.clearData();
-                    }
-                });
-
-				function konamiCode() {
+                function konamiCode() {
 					if (buildingMode) {
 						buildingMode = false;
 					}
 					suckable = true;
-				}
-				
-				function setTrack(key) {
-					if (music) music.stop();
-                    if (key === 'none' || !key) return;
-					music = game.add.audio(key);
-					music.play('', 0, 0.75, true);
-					currentTrack = key;
-				}
-				
-				function roundToHundredths(x) {
-					return Math.round(100*x)/100;
-				}
-				
-				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
-				function moveTowards(obj1, obj2, speed, isChasing) {
-                    if (obj1 == obj2 || isChasing && obj1.name != 'dangerous') {
-                        return;
-                    }
-					if (obj1.body && obj2.body) {
-						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
-						obj1.body.velocity.x = (Math.cos(angle)*speed)+obj1.body.velocity.x;
-						obj1.body.velocity.y = (Math.sin(angle)*speed)+obj1.body.velocity.y;
-					}
-				}
-
+                }
+                
                 function isChasingLoop(obj) {
                     if (obj.name == 'dangerous' && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
                         obj.destroy();
@@ -164,7 +99,7 @@
                             game.input.keyboard.stop();
                             return;
                         } else {
-                            resetPlayer(true);
+                            swirl.resetPlayer(true);
                             switch(lives) {
                                 case 1:
                                     livesText.setText('1 life remaining');
@@ -176,7 +111,7 @@
                         }
                     }
                 }
-				
+                				
 				function moveToHole(obj) {
                     if (isChasing) {
                         return;
@@ -186,15 +121,15 @@
 							for (var i in holes) {
 								if ((holes[i] != obj) && holes[i].alive) {
                                     if (obj['name'] != 'object') {
-									    moveTowards(obj, holes[i], (holes[i].width/15)+19);
+									    swirl.moveTowards(obj, holes[i], (holes[i].width/15)+19);
                                     }
 									if ((Phaser.Math.distance(holes[i].x, holes[i].y, obj.x, obj.y) <= (10+(holes[i].width*0.75)+obj.offsetX))) {
 										if (dieSound) {
 											dieAudio.play('', 0, 1);
 										}
 										if (suckable) {
-											obj.body.x = game.rnd.integerInRange(5, w-5);
-											obj.body.y = game.rnd.integerInRange(5, h-5);
+											obj.body.x = game.rnd.integerInRange(5, W-5);
+											obj.body.y = game.rnd.integerInRange(5, H-5);
 										} else if (obj["name"] == "hole") {
 											if ((holes[i].width < obj.width) && obj.body) {
 												obj.width += (holes[i].width/(obj.width/5));
@@ -215,32 +150,183 @@
 							}
 						}
 					}
-				}
+                }
 
-				function preload() {
-                    console.log("%cTry pressing the tilde key!", "font-size: 14pt");
-					game.load.image('player', 'assets/images/player.png');
-					game.load.image('box', 'assets/images/box.png');
-					game.load.image('circle', 'assets/images/circle.png');
-					game.load.image('cat', 'assets/images/cat.png');
-					game.load.image('blackhole', 'assets/images/blackhole.png');
-					game.load.image('immovable', 'assets/images/immovable.png');
-					
-					game.load.audio('mii', 'assets/audio/music/mii.mp3');
-                    game.load.audio('die', 'assets/audio/die.mp3');
-                    game.load.audio('game', 'assets/audio/game.mp3');
-                    game.load.audio('glass', 'assets/audio/glass.mp3');
-                    textGroup = game.add.group();
-				}
+                function clientLoadSave(data) {
+                    let result, didErr = false;
+                    let save = data.split('\n');
+                    try {
+                        result = JSON.parse(swirl.decode(save[0]));
+                    } catch(err) {
+                        didErr = true;
+                    }
+
+                    if (!didErr && result) {
+                        swirl.load(result);
+                    }
+
+                    if (save[1] && isClient) {
+                        game.paused = true;
+                        game.input.keyboard.stop();
+                        swal({
+                            type: 'warning',
+                            title: 'Bundled Script',
+                            text: 'A script has been found in this save file. Would you like to run it?',
+                            showCancelButton: true,
+                            confirmButtonText: 'Run',
+                            reverseButtons: true
+                        }).then(r => {
+                            game.paused = false;
+                            game.input.keyboard.start();
+                            if (r.value) {
+                                try {
+                                    let d = swirl.base64(save[1]);
+                                    eval(d);
+                                } catch(err) {
+                                    errorInScript(err);
+                                }
+                            }
+                        });
+                    } else if (save[1]) {
+                        try {
+                            let d = swirl.base64(save[1]);
+                            eval(d);
+                        } catch(err) {
+                            errorInScript(err);
+                        }
+                    }
+                }
+
+                function scriptCheck(obj) {
+                    if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+                        obj.data.script(obj);
+                        obj.data.scriptEnabled = false;
+                    } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+                        obj.data.scriptEnabled = true;
+                    }
+
+                    for (var i = 0; i < swirl.keys.length; i++) {
+                        let currentKey = swirl.keys[i];
+                        if (currentKey && (currentKey[1] && currentKey[0].isDown
+                            || !currentKey[1] && currentKey[0].justDown)) {
+                            currentKey[2]();
+                        }
+                    }
+                }
 				
-				String.prototype.replaceAll = function(search, replacement) {
-					var target = this;
+				function frictionCheck(spr, noFriction) {
+					if (spr.body) {
+                        if (spr['name'] == 'object') {
+                            spr.body.velocity.x = 0;
+						    spr.body.velocity.y = 0;
+                            spr.body.angularVelocity = 0;
+                            return;
+                        }
+						if (spr.anchor) {
+							spr.anchor.setTo(0.5, 0.5);
+						}
+						if ((Math.abs(spr.body.x) >= Math.abs((game.world.bounds["width"])+500)) || (Math.abs(spr.body.y) >= (Math.abs(game.world.bounds["height"])+500))) {
+							if (spr["name"] == "player") {
+								spr.kill();
+								spr.reset(W/2, H/2);
+								game.camera.reset(W/2, H/2);
+								game.camera.follow(spr);
+								game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+							} else {
+								spr.destroy();
+								return;
+							}
+						}
+					}
+										
+					if (buildingMode && spr && spr.body) {
+						spr.body.velocity.x = 0;
+						spr.body.velocity.y = 0;
+						if (spr["name"] != "player") {
+							spr.body.angularVelocity = 0;
+						}
+					} else if (spr && spr.body && (friction != 0)) {
+						if (!noFriction) {
+							if (spr.body.velocity.x > 0) {
+								spr.body.velocity.x -= (friction);
+							} else if (spr.body.velocity.x < 0) {
+								spr.body.velocity.x += (friction);
+							} else {
+								spr.body.velocity.x = 0;
+							}
+						}
+						if (Math.abs(spr.body.velocity.x) <= 10) {
+							spr.body.velocity.x = 0;
+						}
+						
+						if (!noFriction) {
+							if (spr.body.velocity.y > 0) {
+								spr.body.velocity.y -= (friction);
+							} else if (spr.body.velocity.y < 0) {
+								spr.body.velocity.y += (friction);
+							} else {
+								spr.body.velocity.y = 0;
+							}
+						}
+						if (Math.abs(spr.body.velocity.y) <= 10) {
+							spr.body.velocity.y = 0;
+						}
+						
+						if (spr["name"] != "player") {
+							if (spr.body.angularVelocity > 0) {
+								spr.body.angularVelocity -= 0.01;
+							} else if (spr.body.angularVelocity < 0) {
+								spr.body.angularVelocity += 0.01;
+							} else {
+								spr.body.angularVelocity = 0;
+							}
+						}
+						
+						if (spr["name"] == "hole") {
+							if (spr.body.x >= (game.world.bounds["width"]-(spr.width/2)-25)) {
+								spr.body.velocity.x = -45;
+							}
+							if (spr.body.y >= (game.world.bounds["height"]-(spr.height/2)-25)) {
+								spr.body.velocity.y = -45;
+							}
+							if ((spr.body.x <= (game.world.bounds["x"]+(spr.width/2)+25))) {
+								spr.body.velocity.x = 45;
+							}
+							if (spr.body.y <= (game.world.bounds["y"]+(spr.height/2)+25)) {
+								spr.body.velocity.y = 45;
+							}	
+						}
+					}
+                }
+
+                function errorInScript(err) {
+                    game.paused = true;
+                    game.input.keyboard.stop();
+                    swal({
+                        title: 'Error in Script',
+                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                        type: 'error'
+                    }).then(() => {
+                        game.paused = false;
+                        game.input.keyboard.start();
+                    });
+                }
+
+                function openDeveloperTools() {
+                    if (isClient) {
+                        return thisWindow.webContents.openDevTools();
+                    }
+                    return false;
+                }
+                function openDebugTools() { return openDeveloperTools() };
+				
+				function replaceAll(target, search, replacement) {
 					return target.replace(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g'), replacement);
 				}
 				
 				// the key used to decode and encode save data
 				// the first one specified in each array is the one to replace, and the second one is the one to replace it with
-				// digits are left unchanged when decoding and encoding
+				// numbers are left unchanged when decoding and encoding
 				let saveLibrary = [
 					// shortens the keys for each of the sections
 					['"o":', 'o'], // (o)bstacles
@@ -261,7 +347,7 @@
 					['{[', 'L'], // (L)eft close
 					['0,0', 'Z'], // two (Z)eros
 					
-					// just switched characters to make sure the URL is valid
+					// just characters switched around to make sure the URL is valid
 					['[', 'B'], // opening (B)racket
 					[']', 'C'], // (C)losing bracket
 					['{', 'Y'], // opening curl(Y) bracket
@@ -271,104 +357,72 @@
 					[':', 'O'], // c(O)lon
 					['-', 'P'], // o(P)posite
 					['.', 'D'], // (D)ecimal
-				]
-					
-				function swirlEncode(text) {
+                ]
+                
+                var swirl = {}
+
+                swirl.getDisplaySize = function() {
+                    return W, H;
+                }
+
+                swirl.getBounds = function() {
+                    let thisRectangle = game.world.getBounds();
+                    return thisRectangle.width, thisRectangle.height;
+                }
+
+				swirl.setTrack = function(key) {
+					if (music) music.stop();
+                    if (key === 'none' || !key) return;
+					music = game.add.audio(key);
+					music.play('', 0, 0.75, true);
+					currentTrack = key;
+				}
+				
+				// based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
+				swirl.moveTowards = function(obj1, obj2, speed, isChasing) {
+                    if (obj1 == obj2 || isChasing && obj1.name != 'dangerous') {
+                        return;
+                    }
+					if (obj1.body && obj2.body) {
+						var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
+						obj1.body.velocity.x = (Math.cos(angle)*speed)+obj1.body.velocity.x;
+						obj1.body.velocity.y = (Math.sin(angle)*speed)+obj1.body.velocity.y;
+					}
+				}
+
+				swirl.encode = function(text) {
 					for (var i in saveLibrary) {
-						text = text.replaceAll(saveLibrary[i][0], saveLibrary[i][1]);
+						text = replaceAll(text, saveLibrary[i][0], saveLibrary[i][1]);
 					}
 					return text;
 				}
 				
-				function swirlDecode(text) {
+				swirl.decode = function(text) {
 					for (var j in saveLibrary) {
-						text = text.replaceAll(saveLibrary[j][1], saveLibrary[j][0]);
+						text = replaceAll(text, saveLibrary[j][1], saveLibrary[j][0]);
 					}
 					return text;
                 }
 
-                function swirlB64Decode(str) {
+                swirl.base64 = function(str) {
                     return atob(str.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
                 }
-
-                function clientLoadSave(data) {
-                    let result, didErr = false;
-                    let save = data.split('\n');
-                    try {
-                        result = JSON.parse(swirlDecode(save[0]));
-                    } catch(err) {
-                        didErr = true;
-                    }
-
-                    if (!didErr && result) {
-                        loadSaveData(result);
-                    }
-
-                    if (save[1] && isClient) {
-                        game.paused = true;
-                        game.input.keyboard.stop();
-                        swal({
-                            type: 'warning',
-                            title: 'Bundled Script',
-                            text: 'A script has been found in this save file. Would you like to run it?',
-                            showCancelButton: true,
-                            confirmButtonText: 'Run',
-                            reverseButtons: true
-                        }).then(r => {
-                            game.paused = false;
-                            game.input.keyboard.start();
-                            if (r.value) {
-                                try {
-                                    let d = swirlB64Decode(save[1]);
-                                    eval(d);
-                                } catch(err) {
-                                    game.paused = true;
-                                    game.input.keyboard.stop();
-                                    swal({
-                                        title: 'Error in Script',
-                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                        type: 'error'
-                                    }).then(() => {
-                                        game.paused = false;
-                                        game.input.keyboard.start();
-                                    });
-                                }
-                            }
-                        });
-                    } else if (save[1]) {
-                        try {
-                            let d = swirlB64Decode(save[1]);
-                            eval(d);
-                        } catch(err) {
-                            game.paused = true;
-                            game.input.keyboard.stop();
-                            swal({
-                                title: 'Error in Script',
-                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                type: 'error'
-                            }).then(() => {
-                                game.paused = false;
-                                game.input.keyboard.start();
-                            });
-                        }
-                    }
-                }
                 
-                function loadSaveData(result) {
-                    resetCanvas();
+                swirl.load = function(result) {
+                    swirl.resetCanvas();
                     for (var i in result["o"]) {
                         if (result["o"][i]) {
-                            addNew('box', result['o'][i][0], result['o'][i][1], false, false, result['o'][i][2], result['o'][i][3]);
+                            swirl.create('box', result['o'][i][0], result['o'][i][1], false, false, result['o'][i][2], result['o'][i][3]);
                         }
                     }
                     for (var i in result["c"]) {
                         if (result["c"][i]) {
-                            addNew('ball', result['c'][i][0], result['c'][i][1], false, false, result['c'][i][2], result['c'][i][3]);
+                            swirl.create('ball', result['c'][i][0], result['c'][i][1], false, false, result['c'][i][2], result['c'][i][3]);
                         }
                     }
                     for (var i in result["d"]) {
                         if (result["d"][i]) {
-                            addNew('cat', result['d'][i][0], result['d'][i][1], false, false, result['d'][i][2], result['d'][i][3]);
+                            swirl.create('cat', result['d'][i][0], result['d'][i][1], false, false, result['d'][i][2], result['d'][i][3]);
                         }
                     }
                     for (var i in result["b"]) {
@@ -386,7 +440,7 @@
                     if (result['i']) {
                         for (var i in result['i']) {
                             if (result['i'][i]) {
-                                addNew('immovable object', result['i'][i][0], result['i'][i][1], false, false, result['i'][i][2], result['i'][i][3]);
+                                swirl.create('immovable object', result['i'][i][0], result['i'][i][1], false, false, result['i'][i][2], result['i'][i][3]);
                             }
                         }
                     }
@@ -398,7 +452,7 @@
                     player.body.velocity.y = result["p"][3];
                     friction = result["g"][0];
                     if (result["g"][1]) {
-                        if (result["g"][1] == -1) {
+                        if (result["g"][1] == -1 || result["g"][1] > W) {
                             game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
                         } else {
                             game.world.setBounds(0, 0, result["g"][1], result["g"][2]);
@@ -413,13 +467,13 @@
                         game.camera.x = result["g"][6];
                         game.camera.y = result["g"][7];
                     }
-                    setTrack(trackList[result["g"][8]]);
+                    swirl.setTrack(trackList[result["g"][8]]);
                     dieSound = (result["g"][9] == 1);
                     gridLock = (result['g'][10] == 1);
                     player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
                 }
 				
-				function onAll(array, func) {
+				swirl.onAll = function(array, func) {
                     if (typeof(array) == 'object') {
                         for (var i in array) {
                             func(array[i]);
@@ -472,7 +526,8 @@
                     }
 				}
 
-				function resetCanvas() {
+				swirl.resetCanvas = function() {
+                    swirl.resetPlayer();
 					for (var i in circles) {
 						circles[i].destroy();
 					}
@@ -498,7 +553,7 @@
 					friction = 4;
 				}
 				
-				function resetPlayer(randomly) {
+				swirl.resetPlayer = function(randomly) {
 					player.kill();
                     if (randomly) {
                         let newPlayerX = game.world.randomX;
@@ -506,22 +561,14 @@
 					    player.reset(newPlayerX, newPlayerY);
 					    game.camera.reset(newPlayerX, newPlayerY);
                     } else {
-					    player.reset(w/2, h/2);
-					    game.camera.reset(w/2, h/2);
+					    player.reset(W/2, H/2);
+					    game.camera.reset(W/2, H/2);
                     }
 					game.camera.follow(player);
-					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
 				}
 
-                function openDeveloperTools() {
-                    if (isClient) {
-                        return thisWindow.webContents.openDevTools();
-                    }
-                    return false;
-                }
-                openDebugTools = openDeveloperTools;
-
-				function stopMusic() {
+				swirl.stopMusic = function() {
 					if (music) {
 						music.stop();
 					}
@@ -529,7 +576,7 @@
 					currentTrack = null;
 				}
 
-				function addNew(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
+				swirl.create = function(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
 					atx = atx || player.x;
                     aty = aty || player.y;
 
@@ -672,22 +719,15 @@
                     return lastAction;
                 }
                 
-                function tieScript(obj, func) {
+                swirl.tieScript = function(obj, func) {
                     if (!obj.data) obj.data = {};
                     obj.data.script = func;
                     obj.data.scriptEnabled = true;
                 }
 
-                let customKeys = [];
-                function registerKey(key, allowHolding, func) {
-                    key = Phaser.KeyCode[key] || key;
-                    unbindKey(key);
-                    customKeys.push([game.input.keyboard.addKey(key), allowHolding, func]);
-                }
-
-                function bindKey(k,a,f) { return registerKey(k,a,f) }
-
-                function unbindKey(key) {
+                swirl.keys = [];
+                
+                swirl.unbindKey = function(key) {
                     key = Phaser.KeyCode[key] || key;
                     Object.keys(keylist).forEach(function(k) {
                         if (keylist[k]['keyCode'] === key) {
@@ -695,117 +735,22 @@
                         }
                     });
 
-                    for (var i = 0; i < customKeys.length; i++) {
-                        let currentKey = customKeys[i];
+                    for (var i = 0; i < swirl.keys.length; i++) {
+                        let currentKey = swirl.keys[i];
                         if (currentKey[0]['keyCode'] === key) {
-                            customKeys.splice(i, 1);
+                            swirl.keys.splice(i, 1);
                         }
                     }
                 }
 
-                function scriptCheck(obj) {
-                    if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
-                        obj.data.script(obj);
-                        obj.data.scriptEnabled = false;
-                    } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
-                        obj.data.scriptEnabled = true;
-                    }
-
-                    for (var i = 0; i < customKeys.length; i++) {
-                        let currentKey = customKeys[i];
-                        if (currentKey && (currentKey[1] && currentKey[0].isDown
-                            || !currentKey[1] && currentKey[0].justDown)) {
-                            currentKey[2]();
-                        }
-                    }
+                swirl.registerKey = function(key, allowHolding, func) {
+                    key = Phaser.KeyCode[key] || key;
+                    swirl.unbindKey(key);
+                    swirl.keys.push([game.input.keyboard.addKey(key), allowHolding, func]);
                 }
-				
-				function frictionCheck(spr, noFriction) {
-					if (spr.body) {
-                        if (spr['name'] == 'object') {
-                            spr.body.velocity.x = 0;
-						    spr.body.velocity.y = 0;
-                            spr.body.angularVelocity = 0;
-                            return;
-                        }
-						if (spr.anchor) {
-							spr.anchor.setTo(0.5, 0.5);
-						}
-						if ((Math.abs(spr.body.x) >= Math.abs((game.world.bounds["width"])+500)) || (Math.abs(spr.body.y) >= (Math.abs(game.world.bounds["height"])+500))) {
-							if (spr["name"] == "player") {
-								spr.kill();
-								spr.reset(w/2, h/2);
-								game.camera.reset(w/2, h/2);
-								game.camera.follow(spr);
-								game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
-							} else {
-								spr.destroy();
-								return;
-							}
-						}
-					}
-										
-					if (buildingMode && spr && spr.body) {
-						spr.body.velocity.x = 0;
-						spr.body.velocity.y = 0;
-						if (spr["name"] != "player") {
-							spr.body.angularVelocity = 0;
-						}
-					} else if (spr && spr.body && (friction != 0)) {
-						if (!noFriction) {
-							if (spr.body.velocity.x > 0) {
-								spr.body.velocity.x -= (friction);
-							} else if (spr.body.velocity.x < 0) {
-								spr.body.velocity.x += (friction);
-							} else {
-								spr.body.velocity.x = 0;
-							}
-						}
-						if (Math.abs(spr.body.velocity.x) <= 10) {
-							spr.body.velocity.x = 0;
-						}
-						
-						if (!noFriction) {
-							if (spr.body.velocity.y > 0) {
-								spr.body.velocity.y -= (friction);
-							} else if (spr.body.velocity.y < 0) {
-								spr.body.velocity.y += (friction);
-							} else {
-								spr.body.velocity.y = 0;
-							}
-						}
-						if (Math.abs(spr.body.velocity.y) <= 10) {
-							spr.body.velocity.y = 0;
-						}
-						
-						if (spr["name"] != "player") {
-							if (spr.body.angularVelocity > 0) {
-								spr.body.angularVelocity -= 0.01;
-							} else if (spr.body.angularVelocity < 0) {
-								spr.body.angularVelocity += 0.01;
-							} else {
-								spr.body.angularVelocity = 0;
-							}
-						}
-						
-						if (spr["name"] == "hole") {
-							if (spr.body.x >= (game.world.bounds["width"]-(spr.width/2)-25)) {
-								spr.body.velocity.x = -45;
-							}
-							if (spr.body.y >= (game.world.bounds["height"]-(spr.height/2)-25)) {
-								spr.body.velocity.y = -45;
-							}
-							if ((spr.body.x <= (game.world.bounds["x"]+(spr.width/2)+25))) {
-								spr.body.velocity.x = 45;
-							}
-							if (spr.body.y <= (game.world.bounds["y"]+(spr.height/2)+25)) {
-								spr.body.velocity.y = 45;
-							}	
-						}
-					}
-                }
+                swirl.bindKey = function(k,a,f) { return swirl.registerKey(k,a,f) }
                 
-                function showText() {
+                swirl.refreshText = function() {
                     textGroup.removeAll(true);
 					if (!mobile) {
 						game.add.text(5, 5, "WASD or arrow keys: moves the tiny square", defaultFont, textGroup).sendToBack();
@@ -847,27 +792,39 @@
                     }
                 }
 
-                function endTimer() {
-                    countdown.stop();
-                }
-
-                function formatTime(s) {
+                swirl.formatTime = function(s) {
                     var minutes = "0" + Math.floor(s / 60);
                     var seconds = "0" + (s - minutes * 60);
                     return minutes.substr(-2) + ":" + seconds.substr(-2);   
                 }
+         
+				function preload() {
+                    console.log("%cTry pressing the tilde key!", "font-size: 14pt");
+					game.load.image('player', 'assets/images/player.png');
+					game.load.image('box', 'assets/images/box.png');
+					game.load.image('circle', 'assets/images/circle.png');
+					game.load.image('cat', 'assets/images/cat.png');
+					game.load.image('blackhole', 'assets/images/blackhole.png');
+					game.load.image('immovable', 'assets/images/immovable.png');
+					
+					game.load.audio('mii', 'assets/audio/music/mii.mp3');
+                    game.load.audio('die', 'assets/audio/die.mp3');
+                    game.load.audio('game', 'assets/audio/game.mp3');
+                    game.load.audio('glass', 'assets/audio/glass.mp3');
+                    textGroup = game.add.group();
+				}
 
 				function render() {
 					game.renderer.renderSession.roundPixels = true;
                     if (countdown.running) {
-                        timerText.setText(formatTime(Math.round((countdownEvent.delay - countdown.ms) / 1000)));
+                        timerText.setText(swirl.formatTime(Math.round((countdownEvent.delay - countdown.ms) / 1000)));
                     } else if (timerText) {
                         timerText.setText('Victory!');
                         tipText.destroy();
                         isChasing = false;
                         hasWon = true;
                         textGroup.visible = true;
-                        onAll(function(element) {
+                        swirl.onAll(function(element) {
                             if (element.name == 'dangerous' && element.body) {
                                 element.body.velocity.x = -1000;
                                 element.body.velocity.y = 0;
@@ -877,9 +834,66 @@
                     }
 				}
 				
-				function create() {         
+				function create() {
+                    document.addEventListener('dragover', function(e){
+                        e.stopPropagation();
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'copy';
+                    });
+
+                    document.addEventListener('drop', function(e){
+                        e.stopPropagation();
+                        e.preventDefault();
+                        
+                        let files = e.dataTransfer.files;
+                        if (files && files[0] && files[0].name) {
+                            var reader = new FileReader();
+                            reader.onload = function(e2) {
+                                let thisData = e2.target.result;
+                                let fileExtension = files[0].name.split('.').pop();
+                                if (fileExtension === 'swirl') {
+                                    clientLoadSave(thisData);
+                                } else {
+                                    try {
+                                        eval(thisData);
+                                    } catch(err) {
+                                        errorInScript(err);
+                                    }
+                                }
+                            }
+                            reader.readAsText(files[0]);
+                        }
+
+                        if (e.dataTransfer.items) {
+                            e.dataTransfer.items.clear();
+                        } else {
+                            e.dataTransfer.clearData();
+                        }
+                    });
+
+                    window.addEventListener('resize', function(){ // handle resizing
+                        W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                        H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                        game.width = W;
+                        game.height = H;
+                        game.camera.setSize(W, H);
+                        if (game.world.bounds.width !== Infinity) {
+                            game.world.setBounds(0, 0, W, H);
+                        }
+
+                        if (game.renderType === 1) {
+                            game.renderer.resize(W, H);
+                        }
+                    });
+
+                    /*      					
+					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
+					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
+					game.scale.parentIsWindow = true;
+                    */
+
                     countdown = game.time.create();
-                    countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, endTimer, this);
+                    countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, function(){countdown.stop()}, this);
                     graphics = game.add.graphics(0, 0);
                     graphics.lineStyle(3, 0x00FF00, 1);
 
@@ -893,7 +907,7 @@
 					dieAudio = game.add.audio('die');
                     this.swipe = new Swipe(this.game);
 					
-					game.world.setBounds(0, 0, w+1, h+1);					
+					game.world.setBounds(0, 0, W, H);					
 					game.physics.startSystem(Phaser.Physics.P2JS);
 					game.stage.backgroundColor = '#404040';
 										
@@ -910,7 +924,7 @@
                     }
 
 					game.camera.follow(player);
-					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
 					
 					cheet('↑ ↑ ↓ ↓ ← → ← → b a', konamiCode);
 					cheet('d i e', function() {
@@ -918,13 +932,13 @@
 						dieAudio.play('', 0, 1);
 					});
 					cheet('w i i', function() {
-						setTrack('mii');
+						swirl.setTrack('mii');
 					});
                     cheet(', .', function() {
                         if (isChasing || hasWon) {
                             return;
                         }
-                        game.world.setBounds(0, 0, w+1, h+1);
+                        game.world.setBounds(0, 0, W, H);
                         isChasing = true;
                         buildingMode = false;
                         dieSound = false;
@@ -933,7 +947,7 @@
                             music.stop();
                         }
                         if (!disableTransform) {
-                            onAll(function(sprite) { // make all pre-existing sprites dangerous
+                            swirl.onAll(function(sprite) { // make all pre-existing sprites dangerous
                                 if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
                                     sprite.tint = 0xFF0000;
                                     sprite.name = 'dangerous';
@@ -944,21 +958,17 @@
                         }
                         lives = 5;
                         tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
-                        livesText = game.add.text(5, h-30, "5 lives remaining", {font: "20px Consolas", fill: "#fff"});
-                        timerText = game.add.text(5, h-60, "2:30", {font: "20px Consolas", fill: "#fff"});
+                        livesText = game.add.text(5, H-30, "5 lives remaining", {font: "20px Consolas", fill: "#fff"});
+                        timerText = game.add.text(5, H-60, "2:30", {font: "20px Consolas", fill: "#fff"});
                         countdown.start();
                         textGroup.visible = false;
                         game.add.audio('glass').play('', 0, 0.75);
                     });
 					
 					game.camera.follow(player);
-					game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+					game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
 
-                    showText();
-					
-					game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
-					game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-					game.scale.parentIsWindow = true;
+                    swirl.refreshText();
 
                     if (isClient) {
                         if (electron.remote.process.argv[1] && isValid(electron.remote.process.argv[1]) && !fs.lstatSync(electron.remote.process.argv[1]).isDirectory()) {
@@ -970,16 +980,7 @@
                                 try {
                                     eval(thisData);
                                 } catch(err) {
-                                    game.paused = true;
-                                    game.input.keyboard.stop();
-                                    swal({
-                                        title: 'Error in Script',
-                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                        type: 'error'
-                                    }).then(() => {
-                                        game.paused = false;
-                                        game.input.keyboard.start();
-                                    });
+                                    errorInScript(err);
                                 }
                             }
                         }
@@ -989,13 +990,13 @@
                         let script = currentURL.searchParams.get("script");
                         if (save) {
                             try {
-                                result = JSON.parse(swirlDecode(save));
+                                result = JSON.parse(swirl.decode(save));
                             } catch(err) {
                                 didErr = true;
                             }
 
                             if (!didErr && result) {
-                                loadSaveData(result);
+                                swirl.load(result);
                             } else {
                                 game.paused = true;
                                 game.input.keyboard.stop();
@@ -1011,18 +1012,9 @@
                         }
                         if (script) {
                             try {
-                                eval(swirlB64Decode(script));
+                                eval(swirl.base64(script));
                             } catch(err) {
-                                game.paused = true;
-                                game.input.keyboard.stop();
-                                swal({
-                                    title: 'Error in Script',
-                                    html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                    type: 'error'
-                                }).then(() => {
-                                    game.paused = false;
-                                    game.input.keyboard.start();
-                                });
+                                errorInScript(err);
                             }
                         }
                     }
@@ -1046,9 +1038,9 @@
                     game.world.forEachExists(scriptCheck, this);
 
                     if (isChasing) {
-                        game.world.forEachExists(moveTowards, this, player, 25, true);
+                        game.world.forEachExists(swirl.moveTowards, this, player, 25, true);
                         game.world.forEachExists(isChasingLoop, this);
-                        onAll('hole', function(hole) {
+                        swirl.onAll('hole', function(hole) {
                             if (actions.length >= 0 && hole.visible && hole.exists) {
                                 let randomAction = actions[game.rnd.integerInRange(0, actions.length-1)];
                                 if (randomAction.body && (Phaser.Math.distance(randomAction.x, randomAction.y, hole.x, hole.y) <= 300) && !lines[randomAction] && randomAction.exists && randomAction.name != 'player' && randomAction.name != 'hole' && game.rnd.integerInRange(1, 20) == 1) {
@@ -1094,7 +1086,7 @@
                             let newX = game.world.randomX;
                             let newY = game.world.randomY;
                             if ((Phaser.Math.distance(newX, newY, player.x, player.y) >= 300)) {
-                                addNew('random', newX, newY, false, true);
+                                swirl.create('random', newX, newY, false, true);
                                 lastAction.tint = 0xFF0000;
                                 lastAction.name = 'dangerous';
                                 lastAction.body.dynamic = true;
@@ -1167,11 +1159,11 @@
 					}
                     
                     if (keylist.easter.justDown && !(keylist.easter.ctrlKey)) {
-						addNew('cat', player.x, player.y, gridLock);
+						swirl.create('cat', player.x, player.y, gridLock);
                     } else if (keylist.object.justDown && !(keylist.object.ctrlKey)) {
-                        addNew('immovable object', player.x, player.y, gridLock);
+                        swirl.create('immovable object', player.x, player.y, gridLock);
                     } else if (keylist.vacuum.isDown) {
-						game.world.forEachExists(moveTowards, this, player, 25);
+						game.world.forEachExists(swirl.moveTowards, this, player, 25);
 					} else if (keylist.expand.justDown && !(keylist.expand.ctrlKey) && !isChasing) {
 						game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
 					} else if (keylist.friction.isDown && !isChasing) {
@@ -1220,10 +1212,10 @@
                         if (trackNumber == -1) { trackNumber = 0; }
 
 						result["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds["width"]), ((game.world.bounds["height"] == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                        result["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
                         if (isClient) result["f"] = 1;
 
-						var b64data = swirlEncode(JSON.stringify(result));
+						var b64data = swirl.encode(JSON.stringify(result));
                         if (isClient) {
                             dialog.showSaveDialog({"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
                                 if (savePath) {
@@ -1261,16 +1253,7 @@
                                         try {
                                             eval(thisData);
                                         } catch(err) {
-                                            game.paused = true;
-                                            game.input.keyboard.stop();
-                                            swal({
-                                                title: 'Error in Script',
-                                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                                type: 'error'
-                                            }).then(() => {
-                                                game.paused = false;
-                                                game.input.keyboard.start();
-                                            });
+                                            errorInScript(err);
                                         }
                                     }
                                 }
@@ -1279,16 +1262,16 @@
                     }
 					
 					if (keylist.move.justDown && player.alive) {
-						addNew('box', player.x, player.y, gridLock);
+						swirl.create('box', player.x, player.y, gridLock);
 					} else if (keylist.unstuck.isDown && !isChasing) {
 						player.body.x -= 10;
 						player.body.y -= 10;
 					}
 					
 					if ((keylist.hole.justDown && player.alive) || (cheatMode && isChasing && keylist.hole.isDown && player.alive)) {
-						addNew('black hole', player.x, player.y, gridLock);
+						swirl.create('black hole', player.x, player.y, gridLock);
 					} else if (keylist.move2.justDown && player.alive) {
-						addNew('ball', player.x, player.y, gridLock);
+						swirl.create('ball', player.x, player.y, gridLock);
 					} else if (keylist.speed1.isDown) {
 						player.body.velocity.y -= 20;
 					} else if (keylist.speed2.isDown) {
@@ -1298,9 +1281,9 @@
 					} else if (keylist.speed4.isDown) {
 						player.body.velocity.x += 20;
 					} else if (keylist.reset.isDown && !isChasing) {
-						resetCanvas();
+						swirl.resetCanvas();
 					} else if (keylist.preset.isDown && !isChasing) {
-						resetPlayer();
+						swirl.resetPlayer();
 					}
 					
 					if (keylist.run.justDown) {
