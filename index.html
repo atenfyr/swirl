@@ -242,6 +242,10 @@
 					return text;
                 }
 
+                function swirlB64Decode(str) {
+                    return atob(str).replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '=');
+                }
+
                 function clientLoadSave(data) {
                     if (!isClient) return false;
 
@@ -272,7 +276,7 @@
                             game.input.keyboard.start();
                             if (r.value) {
                                 try {
-                                    let d = atob(save[1]);
+                                    let d = swirlB64Decode(save[1]);
                                     eval(d);
                                 } catch(err) {
                                     game.paused = true;
@@ -916,7 +920,7 @@
                         }
                         if (script) {
                             try {
-                                eval(atob(script));
+                                eval(swirlB64Decode(script));
                             } catch(err) {
                                 game.paused = true;
                                 game.input.keyboard.stop();

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: 'unsafe-inline'">
+        <link rel="icon" href="icon.ico">
+        <title>Swirl Base64 Encoder</title>
+        <style>
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 20pt;
+                text-align: center;
+                background-color: #404040;
+                color: #FFF;
+            }
+        </style>
+    </head>
+    <body>
+        Input: <br><textarea id="input" rows="5" cols="40" oninput="document.getElementById('output').value = btoa(document.getElementById('input').value).replace(/\+/g, '.').replace(/\//g, '_').replace(/\=/g, '-');"></textarea><br>
+        Output: <br><textarea id="output" readonly=true rows="5" cols="40"></textarea>
+    </body>
+</html>
