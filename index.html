@@ -86,9 +86,7 @@
 				
 				function setTrack(key) {
 					if (music) music.stop();
-                    if (key === 'none' || !key) { 
-                        return; 
-                    }
+                    if (key === 'none' || !key) return;
 					music = game.add.audio(key);
 					music.play('', 0, 0.75, true);
 					currentTrack = key;
