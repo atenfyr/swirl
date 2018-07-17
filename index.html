@@ -681,12 +681,26 @@
                 let customKeys = [];
                 function registerKey(key, allowHolding, func) {
                     key = Phaser.KeyCode[key] || key;
+                    unbindKey(key);
                     customKeys.push([game.input.keyboard.addKey(key), allowHolding, func]);
+                }
+
+                function bindKey(k,a,f) { return registerKey(k,a,f) }
+
+                function unbindKey(key) {
+                    key = Phaser.KeyCode[key] || key;
                     Object.keys(keylist).forEach(function(k) {
                         if (keylist[k]['keyCode'] === key) {
                             keylist[k] = {justDown:false,isDown:false}
                         }
                     });
+
+                    for (var i = 0; i < customKeys.length; i++) {
+                        let currentKey = customKeys[i];
+                        if (currentKey[0]['keyCode'] === key) {
+                            customKeys.splice(i, 1);
+                        }
+                    }
                 }
 
                 function scriptCheck(obj) {
@@ -699,8 +713,8 @@
 
                     for (var i = 0; i < customKeys.length; i++) {
                         let currentKey = customKeys[i];
-                        if (currentKey[1] && currentKey[0].isDown
-                            || !currentKey[1] && currentKey[0].justDown) {
+                        if (currentKey && (currentKey[1] && currentKey[0].isDown
+                            || !currentKey[1] && currentKey[0].justDown)) {
                             currentKey[2]();
                         }
                     }
