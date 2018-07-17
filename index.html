@@ -258,22 +258,37 @@
                     }
 
                     if (save[1]) {
-                        try {
-                            let d = atob(save[1]);
-                            log(d);
-                            eval(d);
-                        } catch(err) {
-                            game.paused = true;
-                            game.input.keyboard.stop();
-                            swal({
-                                title: 'Error in Script',
-                                html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
-                                type: 'error'
-                            }).then(() => {
-                                game.paused = false;
-                                game.input.keyboard.start();
-                            });
-                        }
+                        game.paused = true;
+                        game.input.keyboard.stop();
+                        swal({
+                            type: 'warning',
+                            title: 'Bundled Script',
+                            text: 'A script has been found in this save file. Would you like to run it?',
+                            showCancelButton: true,
+                            confirmButtonText: 'Run',
+                            reverseButtons: true
+                        }).then(r => {
+                            game.paused = false;
+                            game.input.keyboard.start();
+                            if (r.value) {
+                                try {
+                                    let d = atob(save[1]);
+                                    eval(d);
+                                } catch(err) {
+                                    game.paused = true;
+                                    game.input.keyboard.stop();
+                                    swal({
+                                        title: 'Error in Script',
+                                        html: '<textarea readonly=true rows="3" cols="40">' + err + '</textarea>',
+                                        type: 'error'
+                                    }).then(() => {
+                                        game.paused = false;
+                                        game.input.keyboard.start();
+                                    });
+                                }
+                            }
+                        });
+
                     }
                 }
                 
