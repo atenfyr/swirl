@@ -243,7 +243,7 @@
                 }
 
                 function swirlB64Decode(str) {
-                    return atob(str).replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '=');
+                    return atob(str.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
                 }
 
                 function clientLoadSave(data) {
