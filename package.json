@@ -6,7 +6,8 @@
   "postinstall": "electron-builder install-app-deps",
   "scripts": {
     "start": "electron .",
-    "make": "build -p always",
+    "make": "electron-builder",
+    "make-auto": "build -p always",
     "make-docs": "jsdoc2md assets/scripts/swirl.js>DOCUMENTATION.md"
   },
   "repository": {
