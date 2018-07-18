@@ -1,14 +1,4 @@
-const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
-var fs, electron, dialog, thisWindow, isValid; // please don't override these
-if (isClient) {
-    fs = require('fs');
-    electron = require('electron');
-    dialog = electron.remote.dialog;
-    thisWindow = electron.remote.getCurrentWindow();
-    isValid = require('is-valid-path');
-}
-
-const debug = ((isClient && electron.remote.process.argv[2] === 'debug')?true:false);
+const isClient = Boolean(window.electronArgs && window.electronSendMessage);
 
 window.addEventListener('load', function(){
     /**
@@ -306,16 +296,16 @@ window.addEventListener('load', function(){
 
         /**
          * Runs a function on a set of sprites in the world.
-         * If the selector is an object, the function will be ran on all sprites in that object.
+         * If the selector is an array, the function will be ran on all sprites in that array.
          * If the selector is a string, the function will be ran on all sprites of that type.
          * If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
          * 
          * @memberof swirl
-         * @param {(Object|Function|string)} selector 
+         * @param {(Array|Function|string)} selector 
          * @param {Function} [func]
          */
         onAll: function(selector, func) {
-            if (typeof(selector) === 'object') {
+            if (typeof(selector) === 'array') {
                 for (var i in selector) {
                     func(selector[i]);
                 }
@@ -797,35 +787,11 @@ window.addEventListener('load', function(){
             swirl.load(result);
         }
 
-        if (save[1] && isClient) {
-            game.paused = true;
-            game.input.keyboard.stop();
-            swal({
-                type: 'warning',
-                title: 'Bundled Script',
-                text: 'A script has been found in this save file. Would you like to run it?',
-                showCancelButton: true,
-                confirmButtonText: 'Run',
-                reverseButtons: true
-            }).then(r => {
-                game.paused = false;
-                game.input.keyboard.start();
-                if (r.value) {
-                    try {
-                        let d = swirl.base64(save[1]);
-                        eval(d);
-                    } catch(err) {
-                        errorInScript(err);
-                    }
-                }
-            });
-        } else if (save[1]) {
-            try {
-                let d = swirl.base64(save[1]);
-                eval(d);
-            } catch(err) {
-                errorInScript(err);
-            }
+        try {
+            let d = swirl.base64(save[1]);
+            eval(d);
+        } catch(err) {
+            errorInScript(err);
         }
     }
 
@@ -989,7 +955,7 @@ window.addEventListener('load', function(){
 
     function openDeveloperTools() {
         if (isClient) {
-            return thisWindow.webContents.openDevTools();
+            return electronSendMessage('devTools');
         }
         return false;
     }
@@ -1122,12 +1088,6 @@ window.addEventListener('load', function(){
             }
         });
 
-        /*      					
-        game.scale.scaleMode = Phaser.ScaleManager.EXACT_FIT;
-        game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-        game.scale.parentIsWindow = true;
-        */
-
         countdown = game.time.create();
         countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, function(){countdown.stop()}, this);
         graphics = game.add.graphics(0, 0);
@@ -1207,19 +1167,20 @@ window.addEventListener('load', function(){
         refreshText();
 
         if (isClient) {
-            if (electron.remote.process.argv[1] && isValid(electron.remote.process.argv[1]) && !fs.lstatSync(electron.remote.process.argv[1]).isDirectory()) {
-                let thisData = fs.readFileSync(electron.remote.process.argv[1], 'utf-8');
-                let fileExtension = electron.remote.process.argv[1].split('.').pop();
-                if (fileExtension === 'swirl') {
-                    clientLoadSave(thisData);
-                } else {
-                    try {
-                        eval(thisData);
-                    } catch(err) {
-                        errorInScript(err);
+            electronSendMessage('inspectFile').then(thisData => {
+                if (thisData) {
+                    let fileExtension = electronArgs[1].split('.').pop();
+                    if (fileExtension === 'swirl') {
+                        clientLoadSave(thisData);
+                    } else {
+                        try {
+                            eval(thisData);
+                        } catch(err) {
+                            errorInScript(err);
+                        }
                     }
                 }
-            }
+            });
         } else {
             let result, didErr = false;
             let save = currentURL.searchParams.get("load");
@@ -1414,11 +1375,7 @@ window.addEventListener('load', function(){
         } else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
             var b64data = swirl.encode(JSON.stringify(swirl.save()));
             if (isClient) {
-                dialog.showSaveDialog({"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
-                    if (savePath) {
-                        fs.writeFileSync(savePath, b64data, 'utf-8');
-                    }
-                });
+                electronSendMessage('save', b64data);
             } else {
                 var prefix = "https://atenfyr.github.io/swirl/?load="
                 game.input.keyboard.stop();
@@ -1435,15 +1392,14 @@ window.addEventListener('load', function(){
 
         if (isClient) {
             if (keylist.fullscreen.justDown) {
-                thisWindow.setFullScreen(!(thisWindow.isFullScreen()));
-                thisWindow.reload();
+                electronSendMessage('fullscreen');
             } else if (keylist.refreshPage.justDown) {
-                thisWindow.reload();
+                electronSendMessage('refresh');
             } else if (keylist.loadSave.justDown) {
-                dialog.showOpenDialog({"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name":"JavaScript", "extensions":["js"]}]}, function(loadPath) {
-                    if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
-                        let thisData = fs.readFileSync(loadPath[0], 'utf-8');
-                        let fileExtension = loadPath[0].split('.').pop();
+                electronSendMessage('load').then(thisDataArr => {
+                    if (thisDataArr) {
+                        let thisData = thisDataArr[0];
+                        let fileExtension = thisDataArr[1];
                         if (fileExtension === 'swirl') {
                             clientLoadSave(thisData);
                         } else {

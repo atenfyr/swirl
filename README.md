@@ -5,4 +5,4 @@ Swirl is available on the web [here.](https://atenfyr.github.io/swirl/) Alternat
 ## Scripting
 If you'd like, you can write a custom script for Swirl to do whatever you want. There's [some documentary](https://github.com/atenfyr/swirl/wiki/Documentation) for the swirl API available to scripts, but you're also welcome to look at the [source](https://github.com/atenfyr/swirl/blob/experimental/assets/scripts/swirl.js). You can find more information on the [wiki](https://github.com/atenfyr/swirl/wiki/).
 ## Building
-While index.html should run out of the box, you can also build your own copy of the Windows desktop app. You'll need to install global copies of electron and electron-builder with npm. After that, just run `npm install` to install all the dependencies and `npm start` to boot it up or `npm run-script make` to build an installer.
+While index.html should run out of the box, you can also build your own copy of the Windows desktop app. Just download the source, run `npm install`, and run `npm start` to boot it up or `npm run-script make` to build an installer.
