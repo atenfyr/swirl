@@ -1,49 +1,24 @@
 <!DOCTYPE html>
 <html>
 	<!--
-		Uses Phaser, phaser-swipe, cheet.js, SweetAlert2, and Logger.js.
+		Uses Phaser, phaser-swipe, cheet.js, and SweetAlert2.
         Phaser: https://phaser.io/
         phaser-swipe: https://github.com/flogvit/phaser-swipe
 		cheet.js: http://lou.wtf/cheet.js/
         SweetAlert2: https://limonte.github.io/sweetalert2/
-        Logger.js: http://www.songho.ca/misc/logger/logger.html
 	-->
     <head>
         <meta charset="UTF-8" />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: 'unsafe-inline' 'unsafe-eval'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: 'unsafe-eval' 'unsafe-inline'">
         <link rel="icon" href="icon.ico">
         <title>Swirl</title>
         <script src="assets/scripts/dependencies/phaser.min.js"></script>
         <script src="assets/scripts/dependencies/swipe.js"></script>
         <script src="assets/scripts/dependencies/cheet.min.js"></script>
         <script src="assets/scripts/dependencies/sweetalert2.all.min.js"></script>
-        <script src="assets/scripts/dependencies/logger.js"></script>
 
-        <script>
-            const isClient = (navigator.userAgent.toLowerCase().indexOf('electron') > -1);
-            var fs, electron, dialog, thisWindow, isValid; // please don't override these
-            if (isClient) {
-                fs = require('fs');
-                electron = require('electron');
-                dialog = electron.remote.dialog;
-                thisWindow = electron.remote.getCurrentWindow();
-                isValid = require('is-valid-path');
-            }
-
-            const debug = ((isClient && electron.remote.process.argv[2] === 'debug')?true:false);
-        </script>
         <script src="assets/scripts/swirl.js"></script>
-        <style>
-			body, .game {
-				margin: 0 auto;
-				padding: 0 auto;
-				width: 100%;
-				height: 100%;
-				position: fixed;
-				overflow: hidden;
-				background-color: #000000;
-			}
-		</style>
+        <link rel="stylesheet" href="assets/styles/main.css"></style>
     </head>
     <body>
 		<div class='game' style='display: none;'></div>
