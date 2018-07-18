@@ -386,5 +386,3 @@ A callback which is tied to a sprite through [tieScript](#swirl.tieScript).
 | 0 | <code>Phaser.Key</code> | A key created by Phaser.Keyboard. |
 | 1 | <code>boolean</code> | Whether or not the key can be held down. |
 | 2 | <code>function</code> | A callback with no parameters to be executed whenever the key is pressed. |
-
-This documentary was generated with jsdoc-to-markdown.
