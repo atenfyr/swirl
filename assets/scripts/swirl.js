@@ -11,638 +11,675 @@ if (isClient) {
 const debug = ((isClient && electron.remote.process.argv[2] === 'debug')?true:false);
 
 window.addEventListener('load', function(){
-    var swirl = {}
-
     /**
-     * Returns the size of the screen.
-     *
-     * @returns {number} The width of the screen.
-     * @returns {number} The height of the screen.
+     * Swirl API for scripts.
+     * @namespace swirl
      */
-    swirl.getDisplaySize = function() {
-        return W, H;
-    }
-
-    /**
-     * Returns the bounds of the map.
-     * 
-     * @returns {number} The width of the bounding box.
-     * @returns {number} The height of the bounding box.
-     */
-    swirl.getBounds = function() {
-        let thisRectangle = game.world.getBounds();
-        return thisRectangle.width, thisRectangle.height;
-    }
-
-    /**
-     * Returns an array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
-     * 
-     * @returns {Array} Valid tracks.
-     */
-    swirl.getTracks = function() {
-        return [
-            'none',
-            'mii',
-            'game',
-        ]
-    }
-
-    /**
-     * Switches the track to another song. See [getTracks]{@link swirl.getTracks} for a list of valid songs.
-     * 
-     * @param {string} [key] - The song to switch to. If unspecified, calls [stopMusic]{@link swirl.stopMusic}.
-     */
-    swirl.setTrack = function(key) {
-        if (key === 'none' || !key) return swirl.stopMusic();
-        if (music) music.stop();
-        music = game.add.audio(key);
-        music.play('', 0, 0.75, true);
-        currentTrack = key;
-    }
-    
-    /**
-     * Stops any music that is currently playing, if there is any.
-     */
-    swirl.stopMusic = function() {
-        if (music) {
-            music.stop();
-        }
-        music = null;
-        currentTrack = null;
-    }
-
-    /**
-     * Moves a sprite towards another sprite.
-     * 
-     * @param {Phaser.Sprite} obj1 
-     * @param {Phaser.Sprite} obj2 
-     * @param {number} speed - The speed of attraction, where 25 is roughly the speed at which black holes attract sprites.
-     */
-    swirl.moveTowards = function(obj1, obj2, speed) {
-        return moveTowards(obj1, obj2, speed, false);
-    }
-
-    /**
-     * Encodes a string of text in Swirl's save format.
-     * 
-     * @param {string} text
-     * @returns {string} Encoded text.
-     */
-    swirl.encode = function(text) {
-        for (var i in saveLibrary) {
-            text = replaceAll(text, saveLibrary[i][0], saveLibrary[i][1]);
-        }
-        return text;
-    }
-
-    /**
-     * Decodes a string of text in Swirl's save format.
-     * 
-     * @param {string} text
-     * @returns {string} Decoded text.
-     */
-    swirl.decode = function(text) {
-        for (var j in saveLibrary) {
-            text = replaceAll(text, saveLibrary[j][1], saveLibrary[j][0]);
-        }
-        return text;
-    }
-
-    /**
-     * Decodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
-     * 
-     * @param {string} text
-     * @returns {string} Decoded text.
-     */
-    swirl.base64 = function(text) {
-        return atob(text.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
-    }
-
-    /**
-     * @typedef {Array} SavedSprite
-     * @property {number} 0 - The X-value of this sprite.
-     * @property {number} 1 - The Y-value of this sprite.
-     * @property {number} 2 - The horizontal velocity of this sprite.
-     * @property {number} 3 - The vertical velocity of this sprite.
-     */
-
-    /**
-     * @typedef {Array} SavedSpriteExtended
-     * @property {number} 0 - The X-value of this sprite.
-     * @property {number} 1 - The Y-value of this sprite.
-     * @property {number} 2 - The horizontal velocity of this sprite.
-     * @property {number} 3 - The vertical velocity of this sprite.
-     * @property {number} 4 - The angle of this sprite.
-     * @property {number} 5 - The angular velocity of this sprite.
-     */
-
-    /**
-     * @typedef {Array} SavedSpriteWithScale
-     * @property {number} 0 - The X-value of this sprite.
-     * @property {number} 1 - The Y-value of this sprite.
-     * @property {number} 2 - The horizontal scale of this sprite.
-     * @property {number} 3 - The vertical scale of this sprite.
-     */
-
-    /**
-     * @typedef {Array} WorldDataArray
-     * @property {number} 0 - The current friction number.
-     * @property {number} 1 - The width of the map, or -1 if this is Infinity.
-     * @property {number} 2 - The height of the map, or -1 if this is Infinity.
-     * @property {number} 3 - Whether or not building mode is on. (0 if not, 1 if so)
-     * @property {number} 4 - The physics engine's restitution (the "bounciness").
-     * @property {number} 5 - Whether or not the konami code effect has been activated. (0 if not, 1 if so)
-     * @property {number} 6 - The X value of the camera.
-     * @property {number} 7 - The Y value of the camera.
-     * @property {number} 8 - The number (defined in [getTracks]{@link swirl.getTracks}) of the track currently playing.
-     * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect to play. (0 if not, 1 if so)
-     * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
-     */
-
-    /**
-     * @typedef {Object} Save
-     * @property {Array<SavedSprite>} o - All the boxes in the world.
-     * @property {Array<SavedSpriteExtended>} c - All the balls in the world.
-     * @property {Array<SavedSpriteExtended>} d - All the cats in the world.
-     * @property {Array<SavedSpriteWithScale>} b - All the black holes in the world.
-     * @property {Array<SavedSprite>} i - All the immovable objects in the world.
-     * @property {SavedSprite} p - Data about the player.
-     * @property {WorldDataArray} g - Data about the world.
-     * @property {number} f - Set to 0 if this save was generated in a browser, 1 if it was generated in the desktop app.
-     */
-
-    /**
-     * Generates a save file.
-     * 
-     * @returns {Save} A save file that represents the world when the function was called.
-     */
-    swirl.save = function() {
-        let saveData = {};
-        saveData["o"] = [];
-        for (var i in obstacles) {
-            if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
-                saveData["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y), Math.floor(obstacles[i].body.velocity.x), Math.floor(obstacles[i].body.velocity.y)]);
+    var swirl = {
+        /**
+         * Returns the size of the screen.
+         *
+         * @memberof swirl
+         * @returns {number} The width of the screen.
+         * @returns {number} The height of the screen.
+         */
+        getDisplaySize: function() {
+            return W, H;
+        },
+        /**
+         * Returns the bounds of the map.
+         * 
+         * @memberof swirl
+         * @returns {number} The width of the bounding box.
+         * @returns {number} The height of the bounding box.
+         */
+        getBounds: function() {
+            let thisRectangle = game.world.getBounds();
+            return thisRectangle.width, thisRectangle.height;
+        },
+        /**
+         * Returns an array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
+         * 
+         * @memberof swirl
+         * @returns {Array} Valid tracks.
+         */
+        getTracks: function() {
+            return [
+                'none',
+                'mii',
+                'game',
+            ]
+        },
+        /**
+         * Switches the track to another song. See [getTracks]{@link swirl.getTracks} for a list of valid songs.
+         * 
+         * @memberof swirl
+         * @param {string} [key] - The song to switch to. If unspecified, calls [stopMusic]{@link swirl.stopMusic}.
+         */
+        setTrack: function(key) {
+            if (key === 'none' || !key) return swirl.stopMusic();
+            if (music) music.stop();
+            music = game.add.audio(key);
+            music.play('', 0, 0.75, true);
+            currentTrack = key;
+        },
+        /**
+         * Stops any music that is currently playing, if there is any.
+         * 
+         * @memberof swirl
+         */
+        stopMusic: function() {
+            if (music) {
+                music.stop();
             }
-        }
-        saveData["c"] = [];
-        for (var i in circles) {
-            if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
-                saveData["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
+            music = null;
+            currentTrack = null;
+        },
+        
+        /**
+         * Moves a sprite towards another sprite.
+         * 
+         * @memberof swirl
+         * @param {Phaser.Sprite} obj1 
+         * @param {Phaser.Sprite} obj2 
+         * @param {number} speed - The speed of attraction, where 25 is roughly the speed at which black holes attract sprites.
+         * @returns {boolean} - Whether or not the operation succeeded.
+         */
+        moveTowards: function(obj1, obj2, speed) {
+            if (obj1.body && obj2.body && obj1 !== obj2) {
+                var angle = Math.atan2(obj2.y-obj1.y, obj2.x-obj1.x);
+                obj1.body.velocity.x = (Math.cos(angle)*speed)+obj1.body.velocity.x;
+                obj1.body.velocity.y = (Math.sin(angle)*speed)+obj1.body.velocity.y;
+                return true;
             }
-        }
-        saveData["d"] = [];
-        for (var i in cats) {
-            if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
-                saveData["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
-            }
-        }
-        saveData["b"] = [];
-        for (var i in holes) {
-            if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
-                saveData["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
-            }
-        }
-        saveData['i'] = [];
-        for (var i in objects) {
-            if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
-                saveData['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y), Math.floor(objects[i].body.velocity.x), Math.floor(objects[i].body.velocity.y)]);
-            }
-        }
+            return false;
+        },
 
-        let trackNumber = swirl.getTracks().indexOf(currentTrack);
-        if (trackNumber === -1) { trackNumber = 0; }
+        /**
+         * Encodes a string of text in Swirl's save format.
+         * 
+         * @memberof swirl
+         * @param {string} text
+         * @returns {string} Encoded text.
+         */
+        encode: function(text) {
+            for (var i in saveLibrary) {
+                text = replaceAll(text, saveLibrary[i][0], saveLibrary[i][1]);
+            }
+            return text;
+        },
 
-        saveData["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-        saveData["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
-        saveData["f"] = 0;
-        if (isClient) saveData["f"] = 1;
+        /**
+         * Decodes a string of text in Swirl's save format.
+         * 
+         * @memberof swirl
+         * @param {string} text
+         * @returns {string} Decoded text.
+         */
+        decode: function(text) {
+            for (var j in saveLibrary) {
+                text = replaceAll(text, saveLibrary[j][1], saveLibrary[j][0]);
+            }
+            return text;
+        },
 
-        return saveData;
-    }
+        /**
+         * Decodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
+         * 
+         * @memberof swirl
+         * @param {string} text
+         * @returns {string} Decoded text.
+         */
+        base64: function(text) {
+            return atob(text.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
+        },
 
-    /**
-     * Loads an object representing a save file. 
-     * 
-     * @param {Save} saveData 
-     */
-    swirl.load = function(saveData) {
-        swirl.resetCanvas();
-        for (var i in saveData["o"]) {
-            if (saveData["o"][i]) {
-                swirl.create('box', saveData['o'][i][0], saveData['o'][i][1], false, false, saveData['o'][i][2], saveData['o'][i][3]);
-            }
-        }
-        for (var i in saveData["c"]) {
-            if (saveData["c"][i]) {
-                swirl.create('ball', saveData['c'][i][0], saveData['c'][i][1], false, false, saveData['c'][i][2], saveData['c'][i][3]);
-            }
-        }
-        for (var i in saveData["d"]) {
-            if (saveData["d"][i]) {
-                swirl.create('cat', saveData['d'][i][0], saveData['d'][i][1], false, false, saveData['d'][i][2], saveData['d'][i][3]);
-            }
-        }
-        for (var i in saveData["b"]) {
-            if (saveData["b"][i]) {
-                hole = game.add.sprite(saveData['b'][i][0], saveData['b'][i][1], 'blackhole');
-                hole.name = 'hole';
-                hole.scale.setTo(saveData['b'][i][2], saveData['b'][i][3]);
-                game.physics.p2.enable(hole);
-                hole.body.kinematic = true;
-                hole.anchor.setTo(0.5, 0.5);
-                hole.body.setCircle(hole.width/1.85);
-                holes.push(hole);
-            }
-        }
-        if (saveData['i']) {
-            for (var i in saveData['i']) {
-                if (saveData['i'][i]) {
-                    swirl.create('immovable object', saveData['i'][i][0], saveData['i'][i][1], false, false, saveData['i'][i][2], saveData['i'][i][3]);
+        /**
+         * @typedef {Array} SavedSprite
+         * @property {number} 0 - The X-value of this sprite.
+         * @property {number} 1 - The Y-value of this sprite.
+         * @property {number} 2 - The horizontal velocity of this sprite.
+         * @property {number} 3 - The vertical velocity of this sprite.
+         * @memberof swirl
+         */
+
+        /**
+         * @typedef {Array} SavedSpriteExtended
+         * @property {number} 0 - The X-value of this sprite.
+         * @property {number} 1 - The Y-value of this sprite.
+         * @property {number} 2 - The horizontal velocity of this sprite.
+         * @property {number} 3 - The vertical velocity of this sprite.
+         * @property {number} 4 - The angle of this sprite.
+         * @property {number} 5 - The angular velocity of this sprite.
+         * @memberof swirl
+         */
+
+        /**
+         * @typedef {Array} SavedSpriteWithScale
+         * @property {number} 0 - The X-value of this sprite.
+         * @property {number} 1 - The Y-value of this sprite.
+         * @property {number} 2 - The horizontal scale of this sprite.
+         * @property {number} 3 - The vertical scale of this sprite.
+         * @memberof swirl
+         */
+
+        /**
+         * @typedef {Array} WorldDataArray
+         * @property {number} 0 - The current friction number.
+         * @property {number} 1 - The width of the map, or -1 if this is Infinity.
+         * @property {number} 2 - The height of the map, or -1 if this is Infinity.
+         * @property {number} 3 - Whether or not building mode is on. (0 if not, 1 if so)
+         * @property {number} 4 - The physics engine's restitution (the "bounciness").
+         * @property {number} 5 - Whether or not the konami code effect has been activated. (0 if not, 1 if so)
+         * @property {number} 6 - The X value of the camera.
+         * @property {number} 7 - The Y value of the camera.
+         * @property {number} 8 - The number (defined in [getTracks]{@link swirl.getTracks}) of the track currently playing.
+         * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect to play. (0 if not, 1 if so)
+         * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
+         * @memberof swirl
+         */
+
+        /**
+         * @typedef {Object} Save
+         * @property {Array<SavedSprite>} o - All the boxes in the world.
+         * @property {Array<SavedSpriteExtended>} c - All the balls in the world.
+         * @property {Array<SavedSpriteExtended>} d - All the cats in the world.
+         * @property {Array<SavedSpriteWithScale>} b - All the black holes in the world.
+         * @property {Array<SavedSprite>} i - All the immovable objects in the world.
+         * @property {SavedSprite} p - Data about the player.
+         * @property {WorldDataArray} g - Data about the world.
+         * @property {number} f - Set to 0 if this save was generated in a browser, 1 if it was generated in the desktop app.
+         * @memberof swirl
+         */
+
+        /**
+         * Generates a save file.
+         * 
+         * @memberof swirl
+         * @returns {Save} A save file that represents the world when the function was called.
+         */
+        save: function() {
+            let saveData = {};
+            saveData["o"] = [];
+            for (var i in obstacles) {
+                if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
+                    saveData["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y), Math.floor(obstacles[i].body.velocity.x), Math.floor(obstacles[i].body.velocity.y)]);
                 }
             }
-        }
-        player.body.x = saveData["p"][0];
-        player.body.y = saveData["p"][1];
-        player.body.velocity.x = saveData["p"][2];
-        player.body.velocity.y = saveData["p"][3];
-        friction = saveData["g"][0];
-        if (saveData["g"][1] == -1 || saveData["g"][1] > W) {
-            game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-        } else {
-            game.world.setBounds(0, 0, saveData["g"][1], saveData["g"][2]);
-        }
-        buildingMode = (saveData["g"][3] == 1);
-        if (saveData["g"][4]) {
-            game.physics.p2.restitution = saveData["g"][4];
-        }
-        suckable = (saveData["g"][5] == 1);
-        if (saveData["g"][6]) {
-            game.camera.x = saveData["g"][6];
-            game.camera.y = saveData["g"][7];
-        }
-        swirl.setTrack(swirl.getTracks()[saveData["g"][8]]);
-        dieSound = (saveData["g"][9] == 1);
-        gridLock = (saveData['g'][10] == 1);
-        player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
-    }
-
-    /**
-     * Runs a function on a set of sprites in the world.
-     * If the selector is an object, the function will be ran on all sprites in that object.
-     * If the selector is a string, the function will be ran on all sprites of that type.
-     * If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
-     * 
-     * @param {(Object|Function|string)} selector 
-     * @param {Function} [func]
-     */
-    swirl.onAll = function(selector, func) {
-        if (typeof(selector) === 'object') {
-            for (var i in selector) {
-                func(selector[i]);
+            saveData["c"] = [];
+            for (var i in circles) {
+                if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
+                    saveData["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
+                }
             }
-        } else if (typeof(selector) === 'string') {
-            switch(selector.replace(/s$/, "")) {
+            saveData["d"] = [];
+            for (var i in cats) {
+                if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
+                    saveData["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
+                }
+            }
+            saveData["b"] = [];
+            for (var i in holes) {
+                if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
+                    saveData["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
+                }
+            }
+            saveData['i'] = [];
+            for (var i in objects) {
+                if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
+                    saveData['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y), Math.floor(objects[i].body.velocity.x), Math.floor(objects[i].body.velocity.y)]);
+                }
+            }
+
+            let trackNumber = swirl.getTracks().indexOf(currentTrack);
+            if (trackNumber === -1) { trackNumber = 0; }
+
+            saveData["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
+            saveData["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+            saveData["f"] = 0;
+            if (isClient) saveData["f"] = 1;
+
+            return saveData;
+        },
+
+        /**
+         * Loads an object representing a save file. 
+         * 
+         * @memberof swirl
+         * @param {Save} saveData 
+         */
+        load: function(saveData) {
+            swirl.resetCanvas();
+            for (var i in saveData["o"]) {
+                if (saveData["o"][i]) {
+                    swirl.create('box', saveData['o'][i][0], saveData['o'][i][1], false, false, saveData['o'][i][2], saveData['o'][i][3]);
+                }
+            }
+            for (var i in saveData["c"]) {
+                if (saveData["c"][i]) {
+                    swirl.create('ball', saveData['c'][i][0], saveData['c'][i][1], false, false, saveData['c'][i][2], saveData['c'][i][3]);
+                }
+            }
+            for (var i in saveData["d"]) {
+                if (saveData["d"][i]) {
+                    swirl.create('cat', saveData['d'][i][0], saveData['d'][i][1], false, false, saveData['d'][i][2], saveData['d'][i][3]);
+                }
+            }
+            for (var i in saveData["b"]) {
+                if (saveData["b"][i]) {
+                    hole = game.add.sprite(saveData['b'][i][0], saveData['b'][i][1], 'blackhole');
+                    hole.name = 'hole';
+                    hole.scale.setTo(saveData['b'][i][2], saveData['b'][i][3]);
+                    game.physics.p2.enable(hole);
+                    hole.body.kinematic = true;
+                    hole.anchor.setTo(0.5, 0.5);
+                    hole.body.setCircle(hole.width/1.85);
+                    holes.push(hole);
+                }
+            }
+            if (saveData['i']) {
+                for (var i in saveData['i']) {
+                    if (saveData['i'][i]) {
+                        swirl.create('immovable object', saveData['i'][i][0], saveData['i'][i][1], false, false, saveData['i'][i][2], saveData['i'][i][3]);
+                    }
+                }
+            }
+            player.body.x = saveData["p"][0];
+            player.body.y = saveData["p"][1];
+            player.body.velocity.x = saveData["p"][2];
+            player.body.velocity.y = saveData["p"][3];
+            friction = saveData["g"][0];
+            if (saveData["g"][1] == -1 || saveData["g"][1] > W) {
+                game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+            } else {
+                game.world.setBounds(0, 0, saveData["g"][1], saveData["g"][2]);
+            }
+            buildingMode = (saveData["g"][3] == 1);
+            if (saveData["g"][4]) {
+                game.physics.p2.restitution = saveData["g"][4];
+            }
+            suckable = (saveData["g"][5] == 1);
+            if (saveData["g"][6]) {
+                game.camera.x = saveData["g"][6];
+                game.camera.y = saveData["g"][7];
+            }
+            swirl.setTrack(swirl.getTracks()[saveData["g"][8]]);
+            dieSound = (saveData["g"][9] == 1);
+            gridLock = (saveData['g'][10] == 1);
+            player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+        },
+
+        /**
+         * Runs a function on a set of sprites in the world.
+         * If the selector is an object, the function will be ran on all sprites in that object.
+         * If the selector is a string, the function will be ran on all sprites of that type.
+         * If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
+         * 
+         * @memberof swirl
+         * @param {(Object|Function|string)} selector 
+         * @param {Function} [func]
+         */
+        onAll: function(selector, func) {
+            if (typeof(selector) === 'object') {
+                for (var i in selector) {
+                    func(selector[i]);
+                }
+            } else if (typeof(selector) === 'string') {
+                switch(selector.replace(/s$/, "")) {
+                    case 'circle':
+                    case 'sphere':
+                    case 'ball':
+                        selector = circles;
+                        break;
+                    case 'box':
+                    case 'square':
+                    case 'obstacle':
+                        selector = obstacles;
+                        break;
+                    case 'cat':
+                    case 'kitten':
+                        selector = cats;
+                        break;
+                    case 'immovable':
+                    case 'object':
+                    case 'immovable object':
+                        selector = objects;
+                        break;
+                    case 'hole':
+                    case 'blackhole':
+                    case 'black hole':
+                        selector = holes;
+                        break;
+                    case 'player':
+                        selector = [player];
+                        break;
+                    default:
+                        selector = [];
+                        break;
+                }
+                for (var i in selector) {
+                    func(selector[i]);
+                }
+            } else if (typeof(selector) === 'function') {
+                game.world.forEachExists(selector, this);
+            }
+        },
+
+        /**
+         * Resets the canvas.
+         * 
+         * @memberof swirl
+         */
+        resetCanvas: function() {
+            swirl.resetPlayer();
+            for (var i in circles) {
+                circles[i].destroy();
+            }
+            for (var i in obstacles) {
+                obstacles[i].destroy();
+            }
+            for (var i in cats) {
+                cats[i].destroy();
+            }
+            for (var i in holes) {
+                holes[i].destroy();
+            }
+            for (var i in objects) {
+                objects[i].destroy();
+            }
+            obstacles = [];
+            circles = [];
+            cats = [];
+            holes = [];
+            objects = [];
+            actions = [];
+            lastAction = undefined;
+            friction = 4;
+        },
+
+        /**
+         * Resets the camera and the player.
+         * 
+         * @memberof swirl
+         * @param {boolean} randomly - Whether or not to place the player at a random spot on the map rather than the center.
+         */
+        resetPlayer: function(randomly) {
+            player.kill();
+            if (randomly) {
+                let newPlayerX = game.world.randomX;
+                let newPlayerY = game.world.randomY;
+                player.reset(newPlayerX, newPlayerY);
+                game.camera.reset(newPlayerX, newPlayerY);
+            } else {
+                player.reset(W/2, H/2);
+                game.camera.reset(W/2, H/2);
+            }
+            game.camera.follow(player);
+            game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
+        },
+
+        /**
+         * Creates a brand new sprite.
+         * 
+         * @memberof swirl
+         * @param {string} type - The type of sprite to spawn.
+         * @param {number} [atx=player.x] - The X value of the new sprite.
+         * @param {number} [aty=player.y] - The Y value of the new sprite.
+         * @param {boolean} [lockOntoGrid=false] - Whether or not to automatically lock this sprite on the grid.
+         * @param {boolean} [dontAssociate=false] - Whether or not to avoid including this sprite in the global pool of all of its kind. 
+         * @param {number} [vx=0] - The horizontal velocity to start the new sprite with.
+         * @param {number} [vy=0] - The vertical velocity to start the new sprite with.
+         * @returns {Phaser.Sprite} - The sprite that was created.
+         */
+        create: function(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
+            atx = atx || player.x;
+            aty = aty || player.y;
+
+            if (isChasing && type !== 'hole' && type !== 'blackhole' && type !== 'black hole') {
+                atx = game.world.randomX;
+                aty = game.world.randomY;
+            }
+
+            if (type == 'random') {
+                switch(game.rnd.integerInRange(1,4)) {
+                    case 1:
+                        type = 'box';
+                        break;
+                    case 2:
+                        type = 'cat';
+                        break;
+                    case 3:
+                        type = 'object';
+                        break;
+                    default:
+                        type = 'ball';
+                        break;
+                }
+            }
+
+            switch(type) {
                 case 'circle':
                 case 'sphere':
                 case 'ball':
-                    selector = circles;
+                    if (lockOntoGrid) {
+                        atx = Math.round(atx/35)*35;
+                        aty = Math.round(player.y/35)*35;
+                    }
+                    lastAction = game.add.sprite(atx, aty, 'circle');
+                    lastAction.name = 'circle';
+                    game.physics.p2.enable(lastAction);
+                    lastAction.body.setCircle(lastAction.width/2);
+                    if (vx && vy) {
+                        lastAction.body.velocity.x = vx;
+                        lastAction.body.velocity.y = vy;
+                    }
+                    if (!dontAssociate) {
+                        cats.push(lastAction);
+                    }
+                    actions.push(lastAction);
                     break;
                 case 'box':
                 case 'square':
+                case 'rectangle':
                 case 'obstacle':
-                    selector = obstacles;
+                    if (lockOntoGrid) {
+                        atx = Math.round(atx/40)*40;
+                        aty = Math.round(player.y/40)*40;
+                    }
+                    lastAction = game.add.sprite(atx, aty, 'box');
+                    lastAction.name = 'obstacle';
+                    game.physics.p2.enable(lastAction);
+                    lastAction.body.kinematic = true;
+                    if (vx && vy) {
+                        lastAction.body.velocity.x = vx;
+                        lastAction.body.velocity.y = vy;
+                    }
+                    if (!dontAssociate) {
+                        obstacles.push(lastAction);
+                    }
+                    actions.push(lastAction);
                     break;
                 case 'cat':
                 case 'kitten':
-                    selector = cats;
+                    if (lockOntoGrid) {
+                        atx = Math.round(atx/100)*100;
+                        aty = Math.round(player.y/100)*100;
+                    }
+                    lastAction = game.add.sprite(atx, aty, 'cat');
+                    lastAction.name = 'cat';
+                    lastAction.scale.setTo(0.4, 0.4);
+                    game.physics.p2.enable(lastAction);
+                    if (vx && vy) {
+                        lastAction.body.velocity.x = vx;
+                        lastAction.body.velocity.y = vy;
+                    }
+                    if (!dontAssociate) {
+                        cats.push(lastAction);
+                    }
+                    actions.push(lastAction);
                     break;
                 case 'immovable':
                 case 'object':
                 case 'immovable object':
-                    selector = objects;
+                    if (lockOntoGrid) {
+                        atx = Math.round(atx/40)*40;
+                        aty = Math.round(player.y/40)*40;
+                    }
+                    lastAction = game.add.sprite(atx, aty, 'immovable');
+                    lastAction.name = 'object';
+                    game.physics.p2.enable(lastAction);
+                    lastAction.body.kinematic = true;
+                    if (vx && vy) {
+                        lastAction.body.velocity.x = vx;
+                        lastAction.body.velocity.y = vy;
+                    }
+                    if (!dontAssociate) {
+                        objects.push(lastAction);
+                    }
+                    actions.push(lastAction);
                     break;
                 case 'hole':
                 case 'blackhole':
                 case 'black hole':
-                    selector = holes;
-                    break;
-                case 'player':
-                    selector = [player];
-                    break;
-                default:
-                    selector = [];
-                    break;
-            }
-            for (var i in selector) {
-                func(selector[i]);
-            }
-        } else if (typeof(selector) === 'function') {
-            game.world.forEachExists(selector, this);
-        }
-    }
-
-    /**
-     * Resets the canvas.
-     */
-    swirl.resetCanvas = function() {
-        swirl.resetPlayer();
-        for (var i in circles) {
-            circles[i].destroy();
-        }
-        for (var i in obstacles) {
-            obstacles[i].destroy();
-        }
-        for (var i in cats) {
-            cats[i].destroy();
-        }
-        for (var i in holes) {
-            holes[i].destroy();
-        }
-        for (var i in objects) {
-            objects[i].destroy();
-        }
-        obstacles = [];
-        circles = [];
-        cats = [];
-        holes = [];
-        objects = [];
-        actions = [];
-        lastAction = undefined;
-        friction = 4;
-    }
-
-    /**
-     * Resets the camera and the player.
-     * 
-     * @param {boolean} randomly - Whether or not to place the player at a random spot on the map rather than the center.
-     */
-    swirl.resetPlayer = function(randomly) {
-        player.kill();
-        if (randomly) {
-            let newPlayerX = game.world.randomX;
-            let newPlayerY = game.world.randomY;
-            player.reset(newPlayerX, newPlayerY);
-            game.camera.reset(newPlayerX, newPlayerY);
-        } else {
-            player.reset(W/2, H/2);
-            game.camera.reset(W/2, H/2);
-        }
-        game.camera.follow(player);
-        game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
-    }
-
-    /**
-     * Creates a brand new sprite.
-     * 
-     * @param {string} type - The type of sprite to spawn.
-     * @param {number} [atx=player.x] - The X value of the new sprite.
-     * @param {number} [aty=player.y] - The Y value of the new sprite.
-     * @param {boolean} [lockOntoGrid=false] - Whether or not to automatically lock this sprite on the grid.
-     * @param {boolean} [dontAssociate=false] - Whether or not to avoid including this sprite in the global pool of all of its kind. 
-     * @param {number} [vx=0] - The horizontal velocity to start the new sprite with.
-     * @param {number} [vy=0] - The vertical velocity to start the new sprite with.
-     * @returns {Phaser.Sprite} - The sprite that was created.
-     */
-    swirl.create = function(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
-        atx = atx || player.x;
-        aty = aty || player.y;
-
-        if (isChasing && type !== 'hole' && type !== 'blackhole' && type !== 'black hole') {
-            atx = game.world.randomX;
-            aty = game.world.randomY;
-        }
-
-        if (type == 'random') {
-            switch(game.rnd.integerInRange(1,4)) {
-                case 1:
-                    type = 'box';
-                    break;
-                case 2:
-                    type = 'cat';
-                    break;
-                case 3:
-                    type = 'immovable object';
-                    break;
-                default:
-                    type = 'ball';
+                    if (lockOntoGrid) {
+                        atx = Math.round(atx/55)*55;
+                        aty = Math.round(player.y/55)*55;
+                    }
+                    lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
+                    lastAction.name = 'hole';
+                    lastAction.scale.setTo(0.055, 0.055);
+                    game.physics.p2.enable(lastAction);
+                    lastAction.body.kinematic = true;
+                    lastAction.anchor.setTo(0.5, 0.5);
+                    lastAction.body.setCircle(lastAction.width/1.85);
+                    if (vx && vy) {
+                        lastAction.body.velocity.x = vx;
+                        lastAction.body.velocity.y = vy;
+                    }
+                    if (!dontAssociate) {
+                        holes.push(lastAction);
+                    }
+                    actions.push(lastAction);
                     break;
             }
-        }
-
-        switch(type) {
-            case 'circle':
-            case 'sphere':
-            case 'ball':
-                if (lockOntoGrid) {
-                    atx = Math.round(atx/35)*35;
-                    aty = Math.round(player.y/35)*35;
+            if (isChasing) {
+                if (lastAction.name != 'hole') {
+                    lastAction.tint = 0xFF0000;
+                    lastAction.name = 'dangerous';
                 }
-                lastAction = game.add.sprite(atx, aty, 'circle');
-                lastAction.name = 'circle';
-                game.physics.p2.enable(lastAction);
-                lastAction.anchor.setTo(0.5, 0.5);
-                lastAction.body.setCircle(lastAction.width/2);
-                if (vx && vy) {
-                    lastAction.body.velocity.x = vx;
-                    lastAction.body.velocity.y = vy;
-                }
-                if (!dontAssociate) {
-                    circles.push(lastAction);
-                }
-                actions.push(lastAction);
-                break;
-            case 'box':
-            case 'square':
-            case 'rectangle':
-            case 'obstacle':
-                if (lockOntoGrid) {
-                    atx = Math.round(atx/40)*40;
-                    aty = Math.round(player.y/40)*40;
-                }
-                lastAction = game.add.sprite(atx, aty, 'box');
-                lastAction.name = 'obstacle';
-                game.physics.p2.enable(lastAction);
-                lastAction.body.kinematic = true;
-                if (vx && vy) {
-                    lastAction.body.velocity.x = vx;
-                    lastAction.body.velocity.y = vy;
-                }
-                if (!dontAssociate) {
-                    obstacles.push(lastAction);
-                }
-                actions.push(lastAction);
-                break;
-            case 'cat':
-            case 'kitten':
-                if (lockOntoGrid) {
-                    atx = Math.round(atx/100)*100;
-                    aty = Math.round(player.y/100)*100;
-                }
-                lastAction = game.add.sprite(atx, aty, 'cat');
-                lastAction.name = 'cat';
-                lastAction.scale.setTo(0.4, 0.4);
-                game.physics.p2.enable(lastAction);
-                if (vx && vy) {
-                    lastAction.body.velocity.x = vx;
-                    lastAction.body.velocity.y = vy;
-                }
-                if (!dontAssociate) {
-                    cats.push(lastAction);
-                }
-                actions.push(lastAction);
-                break;
-            case 'immovable':
-            case 'object':
-            case 'immovable object':
-                if (lockOntoGrid) {
-                    atx = Math.round(atx/40)*40;
-                    aty = Math.round(player.y/40)*40;
-                }
-                lastAction = game.add.sprite(atx, aty, 'immovable');
-                lastAction.name = 'object';
-                game.physics.p2.enable(lastAction);
-                lastAction.body.kinematic = true;
-                if (vx && vy) {
-                    lastAction.body.velocity.x = vx;
-                    lastAction.body.velocity.y = vy;
-                }
-                if (!dontAssociate) {
-                    objects.push(lastAction);
-                }
-                actions.push(lastAction);
-                break;
-            case 'hole':
-            case 'blackhole':
-            case 'black hole':
-                if (lockOntoGrid) {
-                    atx = Math.round(atx/55)*55;
-                    aty = Math.round(player.y/55)*55;
-                }
-                lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
-                lastAction.name = 'hole';
-                lastAction.scale.setTo(0.055, 0.055);
-                game.physics.p2.enable(lastAction);
-                lastAction.body.kinematic = true;
-                lastAction.anchor.setTo(0.5, 0.5);
-                lastAction.body.setCircle(lastAction.width/1.85);
-                if (vx && vy) {
-                    lastAction.body.velocity.x = vx;
-                    lastAction.body.velocity.y = vy;
-                }
-                if (!dontAssociate) {
-                    holes.push(lastAction);
-                }
-                actions.push(lastAction);
-                break;
-        }
-        if (isChasing) {
-            if (lastAction.name != 'hole') {
-                lastAction.tint = 0xFF0000;
-                lastAction.name = 'dangerous';
             }
-        }
-        return lastAction;
-    }
+            return lastAction;
+        },
 
-    /**
-     * A callback which is tied to a sprite through [tieScript]{@link swirl.tieScript}.
-     * 
-     * @callback tiedScript
-     * @param {Phaser.Sprite} - The sprite this callback is tied to.
-     */
+        /**
+         * A callback which is tied to a sprite through [tieScript]{@link swirl.tieScript}.
+         * 
+         * @memberof swirl
+         * @callback tiedScript
+         * @param {Phaser.Sprite} - The sprite this callback is tied to.
+         */
 
-    /**
-     * Ties a callback to a sprite which executes upon impact with the player. Note that only one script may be tied to a sprite at a time.
+        /**
+         * Ties a callback to a sprite which executes upon impact with the player. Note that only one script may be tied to a sprite at a time.
+         * 
+         * @memberof swirl
+         * @param {Phaser.Sprite} sprite - The sprite to tie this script to.
+         * @param {tiedScript} script - The script to tie to this sprite.
+         */
+        tieScript: function(sprite, script) {
+            if (!sprite.data) sprite.data = {};
+            sprite.data.script = script;
+            sprite.data.scriptEnabled = true;
+        },
 
-     * @param {Phaser.Sprite} sprite - The sprite to tie this script to.
-     * @param {tiedScript} script - The script to tie to this sprite.
-     */
-    swirl.tieScript = function(sprite, script) {
-        if (!sprite.data) sprite.data = {};
-        sprite.data.script = script;
-        sprite.data.scriptEnabled = true;
-    }
+        /**
+         * Unties a script tied to a sprite, if there is one.
+         * 
+         * @memberof swirl
+         * @param {Phaser.Sprite} sprite 
+         */
+        untieScript: function(sprite) {
+            if (!sprite.data) sprite.data = {};
+            sprite.data.script = null;
+            sprite.data.scriptEnabled = null;
+        },
 
-    /**
-     * Unties a script tied to a sprite, if there is one.
-     * 
-     * @param {Phaser.Sprite} sprite 
-     */
-    swirl.untieScript = function(sprite) {
-        if (!sprite.data) sprite.data = {};
-        sprite.data.script = null;
-        sprite.data.scriptEnabled = null;
-    }
+        /**
+         * Returns the script tied to a sprite, if there is one.
+         * 
+         * @memberof swirl
+         * @param {Phaser.Sprite} sprite
+         * @returns {tiedScript}
+         */
+        getScript: function(sprite) {
+            if (!sprite.data) sprite.data = {};
+            return sprite.data.script;
+        },
 
-    /**
-     * Returns the script tied to a sprite, if there is one.
-     * 
-     * @param {Phaser.Sprite} sprite
-     * @returns {tiedScript}
-     */
-    swirl.getScript = function(sprite) {
-        if (!sprite.data) sprite.data = {};
-        return sprite.data.script;
-    }
+        /**
+         * @typedef {Array} CustomKey
+         * @property {Phaser.Key} 0 - A key created by Phaser.Keyboard.
+         * @property {boolean} 1 - Whether or not the key can be held down.
+         * @property {Function} 2 - A callback with no parameters to be executed whenever the key is pressed.
+         * @memberof swirl
+         */
 
-    /**
-     * @typedef {Array} CustomKey
-     * @property {Phaser.Key} 0 - A key created by Phaser.Keyboard.
-     * @property {boolean} 1 - Whether or not the key can be held down.
-     * @property {Function} 2 - A callback with no parameters to be executed whenever the key is pressed.
-     */
+        /**
+         * An array of bound keys created by [registerKey]{@link registerKey}.
+         * 
+         * @memberof swirl
+         * @type {Array<CustomKey>}
+         */
+        keys: [],
 
-    /**
-     * An array of bound keys created by [registerKey]{@link swirl.registerKey}.
-     * 
-     * @type {Array<CustomKey>}
-     */
-    swirl.keys = [];
+        /**
+         * Registers a key. Will unbind any previously existing keys bound to the key specified.
+         * 
+         * @memberof swirl
+         * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
+         * @param {boolean} allowHolding - Whether or not the key can be held down.
+         * @param {Function} cb - A callback with no parameters to be executed whenever the key is pressed.
+         */
+        registerKey: function(key, allowHolding, cb) {
+            key = Phaser.KeyCode[key] || key;
+            swirl.unbindKey(key);
+            swirl.keys.push([game.input.keyboard.addKey(key), allowHolding, cb]);
+        },
+        bindKey: function(k,a,f) { return swirl.registerKey(k,a,f) },
 
-    /**
-     * Registers a key. Will unbind any previously existing keys bound to the key specified.
-     * 
-     * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
-     * @param {boolean} allowHolding - Whether or not the key can be held down.
-     * @param {Function} cb - A callback with no parameters to be executed whenever the key is pressed.
-     */
-    swirl.registerKey = function(key, allowHolding, cb) {
-        key = Phaser.KeyCode[key] || key;
-        swirl.unbindKey(key);
-        swirl.keys.push([game.input.keyboard.addKey(key), allowHolding, cb]);
-    }
-    swirl.bindKey = function(k,a,f) { return swirl.registerKey(k,a,f) }
+        /**
+         * Unbinds all pre-existing keys bound to the key specified.
+         * 
+         * @memberof swirl
+         * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
+         */
+        unbindKey: function(key) {
+            key = Phaser.KeyCode[key] || key;
+            Object.keys(keylist).forEach(function(k) {
+                if (keylist[k]['keyCode'] === key) {
+                    keylist[k] = {justDown:false,isDown:false}
+                }
+            });
 
-    /**
-     * Unbinds all pre-existing keys bound to the key specified.
-     * 
-     * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
-     */
-    swirl.unbindKey = function(key) {
-        key = Phaser.KeyCode[key] || key;
-        Object.keys(keylist).forEach(function(k) {
-            if (keylist[k]['keyCode'] === key) {
-                keylist[k] = {justDown:false,isDown:false}
+            for (var i = 0; i < swirl.keys.length; i++) {
+                let currentKey = swirl.keys[i];
+                if (currentKey[0]['keyCode'] === key) {
+                    swirl.keys.splice(i, 1);
+                }
             }
-        });
+        },
 
-        for (var i = 0; i < swirl.keys.length; i++) {
-            let currentKey = swirl.keys[i];
-            if (currentKey[0]['keyCode'] === key) {
-                swirl.keys.splice(i, 1);
-            }
+        /**
+         * Formats a time specified in seconds to the format MM:SS.
+         * 
+         * @memberof swirl
+         * @param {number} s - Time in seconds.
+         */
+        formatTime: function(s) {
+            var minutes = "0" + Math.floor(s / 60);
+            var seconds = "0" + (s - minutes * 60);
+            return minutes.substr(-2) + ":" + seconds.substr(-2);   
         }
-    }
-
-    /**
-     * Formats a time specified in seconds to the format MM:SS.
-     * 
-     * @param {number} s - Time in seconds.
-     */
-    swirl.formatTime = function(s) {
-        var minutes = "0" + Math.floor(s / 60);
-        var seconds = "0" + (s - minutes * 60);
-        return minutes.substr(-2) + ":" + seconds.substr(-2);   
     }
 
     let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -654,7 +691,7 @@ window.addEventListener('load', function(){
     let circles = []
     let cats = [];
     let holes = [];
-    let objects = []; // immovable objects
+    let objects = [];
     let actions = [];
     let lines = [];
     let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
@@ -812,6 +849,7 @@ window.addEventListener('load', function(){
         }
     }
     
+    // I get that I could probably use Phaser's built-in system for this, but I like mine more
     function frictionCheck(spr, noFriction) {
         if (spr.body) {
             if (spr['name'] == 'object') {
