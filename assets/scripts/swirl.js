@@ -140,7 +140,6 @@ window.addEventListener('load', function(){
          * @property {number} 1 - The Y-value of this sprite.
          * @property {number} 2 - The horizontal velocity of this sprite.
          * @property {number} 3 - The vertical velocity of this sprite.
-         * @memberof swirl
          */
 
         /**
@@ -151,7 +150,6 @@ window.addEventListener('load', function(){
          * @property {number} 3 - The vertical velocity of this sprite.
          * @property {number} 4 - The angle of this sprite.
          * @property {number} 5 - The angular velocity of this sprite.
-         * @memberof swirl
          */
 
         /**
@@ -160,7 +158,6 @@ window.addEventListener('load', function(){
          * @property {number} 1 - The Y-value of this sprite.
          * @property {number} 2 - The horizontal scale of this sprite.
          * @property {number} 3 - The vertical scale of this sprite.
-         * @memberof swirl
          */
 
         /**
@@ -174,9 +171,8 @@ window.addEventListener('load', function(){
          * @property {number} 6 - The X value of the camera.
          * @property {number} 7 - The Y value of the camera.
          * @property {number} 8 - The number (defined in [getTracks]{@link swirl.getTracks}) of the track currently playing.
-         * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect to play. (0 if not, 1 if so)
+         * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect. (0 if not, 1 if so)
          * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
-         * @memberof swirl
          */
 
         /**
@@ -189,7 +185,6 @@ window.addEventListener('load', function(){
          * @property {SavedSprite} p - Data about the player.
          * @property {WorldDataArray} g - Data about the world.
          * @property {number} f - Set to 0 if this save was generated in a browser, 1 if it was generated in the desktop app.
-         * @memberof swirl
          */
 
         /**
@@ -561,6 +556,9 @@ window.addEventListener('load', function(){
                     }
                     actions.push(lastAction);
                     break;
+                default:
+                    return false;
+                    break;
             }
             if (isChasing) {
                 if (lastAction.name != 'hole') {
@@ -621,7 +619,6 @@ window.addEventListener('load', function(){
          * @property {Phaser.Key} 0 - A key created by Phaser.Keyboard.
          * @property {boolean} 1 - Whether or not the key can be held down.
          * @property {Function} 2 - A callback with no parameters to be executed whenever the key is pressed.
-         * @memberof swirl
          */
 
         /**
