@@ -1,3 +1,4 @@
-dist
-node_modules
-scripts
+/dist
+/out
+/node_modules
+/scripts

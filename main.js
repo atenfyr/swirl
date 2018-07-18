@@ -4,12 +4,13 @@ const {app} = require('electron');
 let mainWindow;
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
-    mainWindow = new electron.BrowserWindow({width: display.width, height: display.height, icon:'./assets/images/logo.png'});
+    mainWindow = new electron.BrowserWindow({width: display.width, height: display.height, icon:'./assets/images/logo.png', show: false});
     mainWindow.maximize();
-
-    //mainWindow.webContents.openDevTools();
-
     mainWindow.loadURL(`file://${__dirname}/index.html`);
+
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show()
+    });
 
     mainWindow.on('closed', function() {
         mainWindow = null;
