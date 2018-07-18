@@ -170,7 +170,10 @@ Loads an object representing a save file.
 <a name="swirl.onAll"></a>
 
 ### swirl.onAll(selector, [func])
-Runs a function on a set of sprites in the world.If the selector is an object, the function will be ran on all sprites in that object.If the selector is a string, the function will be ran on all sprites of that type.If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
+Runs a function on a set of sprites in the world.
+If the selector is an object, the function will be ran on all sprites in that object.
+If the selector is a string, the function will be ran on all sprites of that type.
+If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
 
 **Kind**: static method of [<code>swirl</code>](#swirl)  
 
@@ -384,3 +387,4 @@ A callback which is tied to a sprite through [tieScript](#swirl.tieScript).
 | 1 | <code>boolean</code> | Whether or not the key can be held down. |
 | 2 | <code>function</code> | A callback with no parameters to be executed whenever the key is pressed. |
 
+This documentary was generated with jsdoc-to-markdown.
