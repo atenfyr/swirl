@@ -602,7 +602,7 @@ window.addEventListener('load', function(){
     /**
      * Registers a key. Will unbind any previously existing keys bound to the key specified.
      * 
-     * @param {(string|number))} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
+     * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
      * @param {boolean} allowHolding - Whether or not the key can be held down.
      * @param {Function} cb - A callback with no parameters to be executed whenever the key is pressed.
      */
@@ -616,7 +616,7 @@ window.addEventListener('load', function(){
     /**
      * Unbinds all pre-existing keys bound to the key specified.
      * 
-     * @param {(string|number))} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
+     * @param {(string|number)} key - Either a string defined by Phaser.KeyCode or a JavaScript keycode.
      */
     swirl.unbindKey = function(key) {
         key = Phaser.KeyCode[key] || key;
