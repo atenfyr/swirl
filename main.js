@@ -8,7 +8,7 @@ const fs = require('fs');
 let mainWindow;
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
-    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: true, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title:"Swirl", icon:'./assets/images/logo.png', show: false});
+    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: false, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title:"Swirl", icon:'./assets/images/logo.png', show: false});
     mainWindow.maximize();
     mainWindow.loadURL(`file://${__dirname}/index.html`);
 
@@ -61,13 +61,25 @@ function createWindow() {
     });
 }
 
+var shouldQuit = app.makeSingleInstance(function() {
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    }
+});
+
+if (shouldQuit) {
+    app.quit();
+    return;
+}
+
 app.on('ready', function() {
     autoUpdater.checkForUpdatesAndNotify();
     createWindow();
 });
 
 app.on('browser-window-created', function(_,window) {
-    window.setMenu(null);
+    return window.setMenu(null);
 });
 
 app.on('window-all-closed', function() {
