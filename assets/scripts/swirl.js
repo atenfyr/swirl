@@ -1,37 +1,38 @@
 const isClient = Boolean(window.electronArgs && window.electronSendMessage);
 
 window.addEventListener('load', function(){
+    let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
     /**
      * Swirl API for scripts.
      * @namespace swirl
      */
-    var swirl = {
+    const swirl = {
         /**
          * Returns the size of the screen.
          *
          * @memberof swirl
-         * @returns {number} The width of the screen.
-         * @returns {number} The height of the screen.
+         * @returns {Array<number>} The width and height of the screen.
          */
         getDisplaySize: function() {
-            return W, H;
+            return [W, H];
         },
         /**
          * Returns the bounds of the map.
          * 
          * @memberof swirl
-         * @returns {number} The width of the bounding box.
-         * @returns {number} The height of the bounding box.
+         * @returns {Array<number>} The width and height of the bounding box.
          */
         getBounds: function() {
             let thisRectangle = game.world.getBounds();
-            return thisRectangle.width, thisRectangle.height;
+            return [thisRectangle.width, thisRectangle.height];
         },
         /**
          * Returns an array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
          * 
          * @memberof swirl
-         * @returns {Array} Valid tracks.
+         * @returns {Array} An array of valid tracks.
          */
         getTracks: function() {
             return [
@@ -47,7 +48,7 @@ window.addEventListener('load', function(){
          * @param {string} [key] - The song to switch to. If unspecified, calls [stopMusic]{@link swirl.stopMusic}.
          */
         setTrack: function(key) {
-            if (key === 'none' || !key) return swirl.stopMusic();
+            if (key === 'none' || !key) return this.stopMusic();
             if (music) music.stop();
             music = game.add.audio(key);
             music.play('', 0, 0.75, true);
@@ -65,7 +66,6 @@ window.addEventListener('load', function(){
             music = null;
             currentTrack = null;
         },
-        
         /**
          * Moves a sprite towards another sprite.
          * 
@@ -84,7 +84,6 @@ window.addEventListener('load', function(){
             }
             return false;
         },
-
         /**
          * Encodes a string of text in Swirl's save format.
          * 
@@ -98,7 +97,6 @@ window.addEventListener('load', function(){
             }
             return text;
         },
-
         /**
          * Decodes a string of text in Swirl's save format.
          * 
@@ -112,7 +110,6 @@ window.addEventListener('load', function(){
             }
             return text;
         },
-
         /**
          * Decodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
          * 
@@ -123,7 +120,6 @@ window.addEventListener('load', function(){
         base64: function(text) {
             return atob(text.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
         },
-
         /**
          * @typedef {Array} SavedSprite
          * @property {number} 0 - The X-value of this sprite.
@@ -216,7 +212,7 @@ window.addEventListener('load', function(){
                 }
             }
 
-            let trackNumber = swirl.getTracks().indexOf(currentTrack);
+            let trackNumber = this.getTracks().indexOf(currentTrack);
             if (trackNumber === -1) { trackNumber = 0; }
 
             saveData["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
@@ -226,7 +222,6 @@ window.addEventListener('load', function(){
 
             return saveData;
         },
-
         /**
          * Loads an object representing a save file. 
          * 
@@ -234,20 +229,20 @@ window.addEventListener('load', function(){
          * @param {Save} saveData 
          */
         load: function(saveData) {
-            swirl.resetCanvas();
+            this.resetCanvas();
             for (var i in saveData["o"]) {
                 if (saveData["o"][i]) {
-                    swirl.create('box', saveData['o'][i][0], saveData['o'][i][1], false, false, saveData['o'][i][2], saveData['o'][i][3]);
+                    this.create('box', saveData['o'][i][0], saveData['o'][i][1], false, false, saveData['o'][i][2], saveData['o'][i][3]);
                 }
             }
             for (var i in saveData["c"]) {
                 if (saveData["c"][i]) {
-                    swirl.create('ball', saveData['c'][i][0], saveData['c'][i][1], false, false, saveData['c'][i][2], saveData['c'][i][3]);
+                    this.create('ball', saveData['c'][i][0], saveData['c'][i][1], false, false, saveData['c'][i][2], saveData['c'][i][3]);
                 }
             }
             for (var i in saveData["d"]) {
                 if (saveData["d"][i]) {
-                    swirl.create('cat', saveData['d'][i][0], saveData['d'][i][1], false, false, saveData['d'][i][2], saveData['d'][i][3]);
+                    this.create('cat', saveData['d'][i][0], saveData['d'][i][1], false, false, saveData['d'][i][2], saveData['d'][i][3]);
                 }
             }
             for (var i in saveData["b"]) {
@@ -265,7 +260,7 @@ window.addEventListener('load', function(){
             if (saveData['i']) {
                 for (var i in saveData['i']) {
                     if (saveData['i'][i]) {
-                        swirl.create('immovable object', saveData['i'][i][0], saveData['i'][i][1], false, false, saveData['i'][i][2], saveData['i'][i][3]);
+                        this.create('immovable object', saveData['i'][i][0], saveData['i'][i][1], false, false, saveData['i'][i][2], saveData['i'][i][3]);
                     }
                 }
             }
@@ -288,12 +283,11 @@ window.addEventListener('load', function(){
                 game.camera.x = saveData["g"][6];
                 game.camera.y = saveData["g"][7];
             }
-            swirl.setTrack(swirl.getTracks()[saveData["g"][8]]);
+            this.setTrack(this.getTracks()[saveData["g"][8]]);
             dieSound = (saveData["g"][9] == 1);
             gridLock = (saveData['g'][10] == 1);
             player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
         },
-
         /**
          * Runs a function on a set of sprites in the world.
          * If the selector is an array, the function will be ran on all sprites in that array.
@@ -349,14 +343,32 @@ window.addEventListener('load', function(){
                 game.world.forEachExists(selector, this);
             }
         },
+        /**
+         * Checks and updates the size of the screen.
+         * 
+         * @memberof swirl
+         */
+        forceRedraw: function(){
+            W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+            game.width = W;
+            game.height = H;
+            game.camera.setSize(W, H);
+            if (game.world.bounds.width !== Infinity) {
+                game.world.setBounds(0, 0, W, H);
+            }
 
+            if (game.renderType === 1) {
+                game.renderer.resize(W, H);
+            }
+        },
         /**
          * Resets the canvas.
          * 
          * @memberof swirl
          */
         resetCanvas: function() {
-            swirl.resetPlayer();
+            this.resetPlayer();
             for (var i in circles) {
                 circles[i].destroy();
             }
@@ -381,7 +393,6 @@ window.addEventListener('load', function(){
             lastAction = undefined;
             friction = 4;
         },
-
         /**
          * Resets the camera and the player.
          * 
@@ -402,7 +413,6 @@ window.addEventListener('load', function(){
             game.camera.follow(player);
             game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
         },
-
         /**
          * Creates a brand new sprite.
          * 
@@ -417,8 +427,9 @@ window.addEventListener('load', function(){
          * @returns {Phaser.Sprite} - The sprite that was created.
          */
         create: function(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
-            atx = atx || player.x;
-            aty = aty || player.y;
+            atx = ((typeof(atx) === 'number' && !isNaN(atx))?(atx):(player.x));
+            aty = ((typeof(aty) === 'number' && !isNaN(aty))?(aty):(player.y));
+            console.log(atx, aty);
 
             if (isChasing && type !== 'hole' && type !== 'blackhole' && type !== 'black hole') {
                 atx = game.world.randomX;
@@ -571,27 +582,25 @@ window.addEventListener('load', function(){
          * Ties a callback to a sprite which executes upon impact with the player. Note that only one script may be tied to a sprite at a time.
          * 
          * @memberof swirl
-         * @param {Phaser.Sprite} sprite - The sprite to tie this script to.
-         * @param {tiedScript} script - The script to tie to this sprite.
+         * @param {Phaser.Sprite} spr - The sprite to tie this script to.
+         * @param {tiedScript} scr - The script to tie to this sprite.
          */
-        tieScript: function(sprite, script) {
-            if (!sprite.data) sprite.data = {};
-            sprite.data.script = script;
-            sprite.data.scriptEnabled = true;
+        tieScript: function(spr, scr) {
+            if (!spr.data) spr.data = {};
+            spr.data.script = scr;
+            spr.data.scriptEnabled = true;
         },
-
         /**
          * Unties a script tied to a sprite, if there is one.
          * 
          * @memberof swirl
-         * @param {Phaser.Sprite} sprite 
+         * @param {Phaser.Sprite} spr
          */
         untieScript: function(sprite) {
-            if (!sprite.data) sprite.data = {};
-            sprite.data.script = null;
-            sprite.data.scriptEnabled = null;
+            if (!spr.data) spr.data = {};
+            spr.data.script = undefined;
+            spr.data.scriptEnabled = undefined;
         },
-
         /**
          * Returns the script tied to a sprite, if there is one.
          * 
@@ -603,7 +612,6 @@ window.addEventListener('load', function(){
             if (!sprite.data) sprite.data = {};
             return sprite.data.script;
         },
-
         /**
          * @typedef {Array} CustomKey
          * @property {Phaser.Key} 0 - A key created by Phaser.Keyboard.
@@ -618,7 +626,6 @@ window.addEventListener('load', function(){
          * @type {Array<CustomKey>}
          */
         keys: [],
-
         /**
          * Registers a key. Will unbind any previously existing keys bound to the key specified.
          * 
@@ -629,11 +636,10 @@ window.addEventListener('load', function(){
          */
         registerKey: function(key, allowHolding, cb) {
             key = Phaser.KeyCode[key] || key;
-            swirl.unbindKey(key);
-            swirl.keys.push([game.input.keyboard.addKey(key), allowHolding, cb]);
+            this.unbindKey(key);
+            this.keys.push([game.input.keyboard.addKey(key), allowHolding, cb]);
         },
-        bindKey: function(k,a,f) { return swirl.registerKey(k,a,f) },
-
+        bindKey: function(k,a,f) { return this.registerKey(k,a,f) },
         /**
          * Unbinds all pre-existing keys bound to the key specified.
          * 
@@ -648,16 +654,15 @@ window.addEventListener('load', function(){
                 }
             });
 
-            for (var i = 0; i < swirl.keys.length; i++) {
-                let currentKey = swirl.keys[i];
+            for (var i = 0; i < this.keys.length; i++) {
+                let currentKey = this.keys[i];
                 if (currentKey[0]['keyCode'] === key) {
-                    swirl.keys.splice(i, 1);
+                    this.keys.splice(i, 1);
                 }
             }
         },
-
         /**
-         * Formats a time specified in seconds to the format MM:SS.
+         * Formats a time specified in seconds with the format MM:SS.
          * 
          * @memberof swirl
          * @param {number} s - Time in seconds.
@@ -669,8 +674,6 @@ window.addEventListener('load', function(){
         }
     }
 
-    let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
     let currentURL = new URL(window.location.href);
     let defaultFont = {font: "15px Consolas", fill: "#fff"};
                     
@@ -796,10 +799,10 @@ window.addEventListener('load', function(){
     }
 
     function scriptCheck(obj) {
-        if (obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+        if (obj.alive && obj.data && obj.data.script && obj.data.scriptEnabled && (Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
             obj.data.script(obj);
             obj.data.scriptEnabled = false;
-        } else if (obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
+        } else if (obj.alive && obj.data && obj.data.script && !obj.data.scriptEnabled && !(Phaser.Math.distance(obj.x, obj.y, player.x, player.y) <= (5+(obj.width*0.75)+player.offsetX))) {
             obj.data.scriptEnabled = true;
         }
 
@@ -1073,20 +1076,7 @@ window.addEventListener('load', function(){
             }
         });
 
-        window.addEventListener('resize', function(){ // handle resizing
-            W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-            H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-            game.width = W;
-            game.height = H;
-            game.camera.setSize(W, H);
-            if (game.world.bounds.width !== Infinity) {
-                game.world.setBounds(0, 0, W, H);
-            }
-
-            if (game.renderType === 1) {
-                game.renderer.resize(W, H);
-            }
-        });
+        window.addEventListener('resize', swirl.forceRedraw);
 
         countdown = game.time.create();
         countdownEvent = countdown.add(Phaser.Timer.MINUTE * 2.5, function(){countdown.stop()}, this);
