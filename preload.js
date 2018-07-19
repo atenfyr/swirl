@@ -1,8 +1,7 @@
 /*
     You really shouldn't be using anything defined here in your scripts.
-    The only reason this file exists is to avoid giving access to the
-    Electron API to scripts and instead allow the main process to handle
-    all the grunt work.
+    Everything here is used internally in order to prevent giving the
+    Electron API to scripts, and that's about it.
 
     That being said, if you still need to use these for some odd reason,
     you can. However, there's probably a better way to do whatever you

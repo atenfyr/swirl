@@ -1,9 +1,10 @@
-const electron = require('electron');
-const {app, dialog, ipcMain} = require('electron');
-const {autoUpdater} = require('electron-updater');
-const isValid = require('is-valid-path');
 const path = require('path');
 const fs = require('fs');
+const isValid = require('is-valid-path');
+
+const electron = require('electron');
+const {app, dialog, shell, ipcMain} = require('electron');
+const {autoUpdater} = require('electron-updater');
 
 let mainWindow;
 function createWindow() {
@@ -59,9 +60,19 @@ function createWindow() {
     mainWindow.on('closed', function() {
         mainWindow = null;
     });
+
+    mainWindow.webContents.on('new-window', function(event, url) {
+        event.preventDefault();
+        shell.openExternal(url);
+    });
+
+    mainWindow.webContents.on('will-navigate', function(event, url) {
+        event.preventDefault();
+        shell.openExternal(url);
+    });
 }
 
-var shouldQuit = app.makeSingleInstance(function() {
+let shouldQuit = app.makeSingleInstance(function() {
     if (mainWindow) {
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.focus();

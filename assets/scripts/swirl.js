@@ -429,7 +429,6 @@ window.addEventListener('load', function(){
         create: function(type, atx, aty, lockOntoGrid, dontAssociate, vx, vy) {
             atx = ((typeof(atx) === 'number' && !isNaN(atx))?(atx):(player.x));
             aty = ((typeof(aty) === 'number' && !isNaN(aty))?(aty):(player.y));
-            console.log(atx, aty);
 
             if (isChasing && type !== 'hole' && type !== 'blackhole' && type !== 'black hole') {
                 atx = game.world.randomX;
