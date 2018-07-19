@@ -8,53 +8,48 @@ const fs = require('fs');
 let mainWindow;
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
-    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: false, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title:"Swirl", icon:'./assets/images/logo.png', show: false});
+    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: true, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title:"Swirl", icon:'./assets/images/logo.png', show: false});
     mainWindow.maximize();
     mainWindow.loadURL(`file://${__dirname}/index.html`);
 
-    ipcMain.on('swirlInspectFile', (event, arg) => {
-        arg = arg || process.argv[1];
-        if (arg && isValid(arg) && !fs.lstatSync(arg).isDirectory()) {
-            event.sender.send('rswirlInspectFile', fs.readFileSync(arg, 'utf-8'));
+    ipcMain.on('swirl_inspect', (event) => {
+        let selectedPath = process.argv[1];
+        if (selectedPath && isValid(selectedPath) && !fs.lstatSync(selectedPath).isDirectory()) {
+            event.sender.send('rswirl_inspect', fs.readFileSync(selectedPath, 'utf-8'));
         } else {
-            event.sender.send('rswirlInspectFile', false);
+            event.sender.send('rswirl_inspect', false);
         }
     });
 
-    ipcMain.on('swirlSave', (event, data) => {
+    ipcMain.on('swirl_save', (event, data) => {
         dialog.showSaveDialog(mainWindow, {"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
             if (savePath) {
                 fs.writeFileSync(savePath, data, 'utf-8');
-                event.sender.send('rswirlSave', savePath);
+                event.sender.send('rswirl_save', savePath);
             } else {
-                event.sender.send('rswirlSave', false);
+                event.sender.send('rswirl_save', false);
             }
         });
     });
 
-    ipcMain.on('swirlLoad', (event) => {
+    ipcMain.on('swirl_load', (event) => {
         dialog.showOpenDialog(mainWindow, {"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name":"JavaScript", "extensions":["js"]}]}, function(loadPath) {
             if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
-                event.sender.send('rswirlLoad', [fs.readFileSync(loadPath[0], 'utf-8'), loadPath[0].split('.').pop()]);
+                event.sender.send('rswirl_load', [fs.readFileSync(loadPath[0], 'utf-8'), loadPath[0].split('.').pop()]);
             } else {
-                event.sender.send('rswirlLoad', false);
+                event.sender.send('rswirl_load', false);
             }
         });
     });
 
-    ipcMain.on('swirlFullscreen', (event) => {
+    ipcMain.on('swirl_fullscreen', (event) => {
         mainWindow.setFullScreen(!(mainWindow.isFullScreen()));
-        event.sender.send('rswirlFullscreen', true);
+        event.sender.send('rswirl_fullscreen', true);
     });
 
-    ipcMain.on('swirlRefresh', (event) => {
-        mainWindow.reload();
-        event.sender.send('rswirlRefresh', true);
-    });
-
-    ipcMain.on('swirlDevTools', (event) => {
+    ipcMain.on('swirl_devtools', (event) => {
         mainWindow.webContents.openDevTools();
-        event.sender.send('rswirlDevTools', true);
+        event.sender.send('rswirl_devtools', true);
     });
 
     mainWindow.once('ready-to-show', () => {

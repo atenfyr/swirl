@@ -958,7 +958,7 @@ window.addEventListener('load', function(){
 
     function openDeveloperTools() {
         if (isClient) {
-            return electronSendMessage('devTools');
+            return electronSendMessage('devtools');
         }
         return false;
     }
@@ -1157,7 +1157,7 @@ window.addEventListener('load', function(){
         refreshText();
 
         if (isClient) {
-            electronSendMessage('inspectFile').then(thisData => {
+            electronSendMessage('inspect').then(thisData => {
                 if (thisData) {
                     let fileExtension = electronArgs[1].split('.').pop();
                     if (fileExtension === 'swirl') {
@@ -1384,7 +1384,7 @@ window.addEventListener('load', function(){
             if (keylist.fullscreen.justDown) {
                 electronSendMessage('fullscreen');
             } else if (keylist.refreshPage.justDown) {
-                electronSendMessage('refresh');
+                window.location.reload();
             } else if (keylist.loadSave.justDown) {
                 electronSendMessage('load').then(thisDataArr => {
                     if (thisDataArr) {
