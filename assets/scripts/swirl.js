@@ -1,11 +1,11 @@
-const isClient = Boolean(window.electronArgs && window.electronSendMessage);
+const isClient = Boolean(window.swirlDesktopApp);
 
 window.addEventListener('load', function(){
     let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
     /**
-     * Swirl API for scripts.
+     * Swirl API for scripts. Note that scripts have access to everything defined in the source; the Swirl API is primarily for convenience.
      * @namespace swirl
      */
     const swirl = {
@@ -29,30 +29,49 @@ window.addEventListener('load', function(){
             return [thisRectangle.width, thisRectangle.height];
         },
         /**
+         * An array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
+         * 
+         * @memberof swirl
+         * @type {Array<string>}
+         */
+        tracks: [
+            'none',
+            'mii',
+            'game',
+        ],
+        currentTrack: 'none',
+        /**
          * Returns an array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
          * 
+         * @deprecated
          * @memberof swirl
          * @returns {Array} An array of valid tracks.
          */
         getTracks: function() {
-            return [
-                'none',
-                'mii',
-                'game',
-            ]
+            console.warn('Warning: swirl.getTracks is deprecated and will be removed in the recent future.');
+            return tracks;
         },
         /**
-         * Switches the track to another song. See [getTracks]{@link swirl.getTracks} for a list of valid songs.
+         * Switches the track to another song. See [tracks]{@link swirl.tracks} for a list of valid songs.
          * 
          * @memberof swirl
-         * @param {string} [key] - The song to switch to. If unspecified, calls [stopMusic]{@link swirl.stopMusic}.
+         * @param {string} [key] - The song to switch to. If unspecified or set to "none," calls [stopMusic]{@link swirl.stopMusic} instead.
          */
         setTrack: function(key) {
             if (key === 'none' || !key) return this.stopMusic();
             if (music) music.stop();
             music = game.add.audio(key);
             music.play('', 0, 0.75, true);
-            currentTrack = key;
+            this.currentTrack = key;
+        },
+        /**
+         * Returns the currently playing track.
+         * 
+         * @memberof swirl
+         * @returns {string} - The track currently playing.
+         */
+        getPlayingTrack: function() {
+            return this.currentTrack;
         },
         /**
          * Stops any music that is currently playing, if there is any.
@@ -64,14 +83,14 @@ window.addEventListener('load', function(){
                 music.stop();
             }
             music = null;
-            currentTrack = null;
+            this.currentTrack = null;
         },
         /**
          * Moves a sprite towards another sprite.
          * 
          * @memberof swirl
-         * @param {Phaser.Sprite} obj1 
-         * @param {Phaser.Sprite} obj2 
+         * @param {Phaser.Sprite} obj1 - The object being pulled.
+         * @param {Phaser.Sprite} obj2 - The object which is pulling.
          * @param {number} speed - The speed of attraction, where 25 is roughly the speed at which black holes attract sprites.
          * @returns {boolean} - Whether or not the operation succeeded.
          */
@@ -111,14 +130,36 @@ window.addEventListener('load', function(){
             return text;
         },
         /**
+         * Encodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
+         * 
+         * @memberof swirl
+         * @param {string} text
+         * @returns {string} Encoded text.
+         */
+        encodeb64: function(text) {
+            return btoa(text).replace(/\+/g, '.').replace(/\//g, '_').replace(/\=/g, '-');
+        },
+        /**
          * Decodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
          * 
          * @memberof swirl
          * @param {string} text
          * @returns {string} Decoded text.
          */
-        base64: function(text) {
+        decodeb64: function(text) {
             return atob(text.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
+        },
+        /**
+         * Serves as backwards compatibility for [decodeb64]{@link swirl.decodeb64}
+         * 
+         * @deprecated
+         * @memberof swirl
+         * @param {string} text
+         * @returns {string} Decoded text.
+        */
+        base64: function(text) {
+            console.warn('Warning: swirl.base64 is deprecated and will be removed in the recent future. Please use swirl.decodeb64.');
+            return this.decodeb64(text);
         },
         /**
          * @typedef {Array} SavedSprite
@@ -156,13 +197,13 @@ window.addEventListener('load', function(){
          * @property {number} 5 - Whether or not the konami code effect has been activated. (0 if not, 1 if so)
          * @property {number} 6 - The X value of the camera.
          * @property {number} 7 - The Y value of the camera.
-         * @property {number} 8 - The number (defined in [getTracks]{@link swirl.getTracks}) of the track currently playing.
+         * @property {number} 8 - The number (defined in [tracks]{@link swirl.tracks}) of the track currently playing.
          * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect. (0 if not, 1 if so)
          * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
          */
 
         /**
-         * @typedef {Object} Save
+         * @typedef {Object} SaveData
          * @property {Array<SavedSprite>} o - All the boxes in the world.
          * @property {Array<SavedSpriteExtended>} c - All the balls in the world.
          * @property {Array<SavedSpriteExtended>} d - All the cats in the world.
@@ -173,125 +214,187 @@ window.addEventListener('load', function(){
          * @property {number} f - Set to 0 if this save was generated in a browser, 1 if it was generated in the desktop app.
          */
 
-        /**
-         * Generates a save file.
-         * 
-         * @memberof swirl
-         * @returns {Save} A save file that represents the world when the function was called.
-         */
-        save: function() {
-            let saveData = {};
-            saveData["o"] = [];
-            for (var i in obstacles) {
-                if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
-                    saveData["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y), Math.floor(obstacles[i].body.velocity.x), Math.floor(obstacles[i].body.velocity.y)]);
-                }
-            }
-            saveData["c"] = [];
-            for (var i in circles) {
-                if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
-                    saveData["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
-                }
-            }
-            saveData["d"] = [];
-            for (var i in cats) {
-                if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
-                    saveData["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
-                }
-            }
-            saveData["b"] = [];
-            for (var i in holes) {
-                if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
-                    saveData["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
-                }
-            }
-            saveData['i'] = [];
-            for (var i in objects) {
-                if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
-                    saveData['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y), Math.floor(objects[i].body.velocity.x), Math.floor(objects[i].body.velocity.y)]);
+        /** A save file. */
+        Save: class {
+            /**
+             * Creates a save file.
+             * 
+             * @param {SaveData} [data] - The save data to give this save file. Defaults to nothing.
+             */
+            constructor(data) {
+                if (data) {
+                    this.data = data;
                 }
             }
 
-            let trackNumber = this.getTracks().indexOf(currentTrack);
-            if (trackNumber === -1) { trackNumber = 0; }
+            /**
+             * Imports a string and sets this save data to it.
+             * 
+             * @param {string} data - Some save data stored as a string.
+             * @returns {Save} this
+             * @see Save.export 
+             */
+            import(data) {
+                this.data = JSON.parse(swirl.decode(data));
+                return this;
+            }
 
-            saveData["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
-            saveData["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
-            saveData["f"] = 0;
-            if (isClient) saveData["f"] = 1;
+            /**
+             * Exports the save data as a string.
+             * 
+             * @returns {string} - A string representing a save file.
+             * @see Save.import 
+             */
+            export() {
+                if (!this.data || typeof(this.data) !== 'object' || Object.keys(this.data).length === 0) throw new Error('No data in this save file');
+                return swirl.encode(JSON.stringify(this.data));
+            }
 
-            return saveData;
-        },
-        /**
-         * Loads an object representing a save file. 
-         * 
-         * @memberof swirl
-         * @param {Save} saveData 
-         */
-        load: function(saveData) {
-            this.resetCanvas();
-            for (var i in saveData["o"]) {
-                if (saveData["o"][i]) {
-                    this.create('box', saveData['o'][i][0], saveData['o'][i][1], false, false, saveData['o'][i][2], saveData['o'][i][3]);
-                }
-            }
-            for (var i in saveData["c"]) {
-                if (saveData["c"][i]) {
-                    this.create('ball', saveData['c'][i][0], saveData['c'][i][1], false, false, saveData['c'][i][2], saveData['c'][i][3]);
-                }
-            }
-            for (var i in saveData["d"]) {
-                if (saveData["d"][i]) {
-                    this.create('cat', saveData['d'][i][0], saveData['d'][i][1], false, false, saveData['d'][i][2], saveData['d'][i][3]);
-                }
-            }
-            for (var i in saveData["b"]) {
-                if (saveData["b"][i]) {
-                    hole = game.add.sprite(saveData['b'][i][0], saveData['b'][i][1], 'blackhole');
-                    hole.name = 'hole';
-                    hole.scale.setTo(saveData['b'][i][2], saveData['b'][i][3]);
-                    game.physics.p2.enable(hole);
-                    hole.body.kinematic = true;
-                    hole.anchor.setTo(0.5, 0.5);
-                    hole.body.setCircle(hole.width/1.85);
-                    holes.push(hole);
-                }
-            }
-            if (saveData['i']) {
-                for (var i in saveData['i']) {
-                    if (saveData['i'][i]) {
-                        this.create('immovable object', saveData['i'][i][0], saveData['i'][i][1], false, false, saveData['i'][i][2], saveData['i'][i][3]);
+            /**
+             * Sets the save data to the current world.
+             * 
+             * @returns {Save} this
+             */
+            store() {
+                this.data = {}
+                this.data["o"] = [];
+                for (var i in obstacles) {
+                    if (!((Math.abs(obstacles[i].position.x) >= 100000) || (Math.abs(obstacles[i].position.y) >= 100000)) && obstacles[i].body) {
+                        this.data["o"].push([Math.round(obstacles[i].position.x), Math.round(obstacles[i].position.y), Math.floor(obstacles[i].body.velocity.x), Math.floor(obstacles[i].body.velocity.y)]);
                     }
                 }
+                this.data["c"] = [];
+                for (var i in circles) {
+                    if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
+                        this.data["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
+                    }
+                }
+                this.data["d"] = [];
+                for (var i in cats) {
+                    if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
+                        this.data["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
+                    }
+                }
+                this.data["b"] = [];
+                for (var i in holes) {
+                    if (!((Math.abs(holes[i].position.x) >= 100000) || (Math.abs(holes[i].position.y) >= 100000)) && holes[i].body) {
+                        this.data["b"].push([Math.floor(holes[i].position.x), Math.floor(holes[i].position.y), roundToHundredths(holes[i].scale.x), roundToHundredths(holes[i].scale.y)]);
+                    }
+                }
+                this.data['i'] = [];
+                for (var i in objects) {
+                    if (!((Math.abs(objects[i].position.x) >= 100000) || (Math.abs(objects[i].position.y) >= 100000)) && objects[i].body) {
+                        this.data['i'].push([Math.round(objects[i].position.x), Math.round(objects[i].position.y), Math.floor(objects[i].body.velocity.x), Math.floor(objects[i].body.velocity.y)]);
+                    }
+                }
+    
+                let trackNumber = swirl.tracks.indexOf(swirl.getPlayingTrack());
+                if (trackNumber === -1) { trackNumber = 0; }
+    
+                this.data["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
+                this.data["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
+                this.data["f"] = 0;
+                if (isClient) this.data["f"] = 1;
+
+                return this;
             }
-            player.body.x = saveData["p"][0];
-            player.body.y = saveData["p"][1];
-            player.body.velocity.x = saveData["p"][2];
-            player.body.velocity.y = saveData["p"][3];
-            friction = saveData["g"][0];
-            if (saveData["g"][1] == -1 || saveData["g"][1] > W) {
-                game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-            } else {
-                game.world.setBounds(0, 0, saveData["g"][1], saveData["g"][2]);
+
+            /**
+             * Loads this save file into the world.
+             * 
+             * @returns {Save} this
+             */
+            load() {
+                if (!this.data || typeof(this.data) !== 'object' || Object.keys(this.data).length === 0) throw new Error('No data in this save file');
+                swirl.resetCanvas();
+                for (var i in this.data["o"]) {
+                    if (this.data["o"][i]) {
+                        swirl.create('box', this.data['o'][i][0], this.data['o'][i][1], false, false, this.data['o'][i][2], this.data['o'][i][3]);
+                    }
+                }
+                for (var i in this.data["c"]) {
+                    if (this.data["c"][i]) {
+                        swirl.create('ball', this.data['c'][i][0], this.data['c'][i][1], false, false, this.data['c'][i][2], this.data['c'][i][3]);
+                    }
+                }
+                for (var i in this.data["d"]) {
+                    if (this.data["d"][i]) {
+                        swirl.create('cat', this.data['d'][i][0], this.data['d'][i][1], false, false, this.data['d'][i][2], this.data['d'][i][3]);
+                    }
+                }
+                for (var i in this.data["b"]) {
+                    if (this.data["b"][i]) {
+                        hole = game.add.sprite(this.data['b'][i][0], this.data['b'][i][1], hole);
+                        hole.name = 'hole';
+                        hole.scale.setTo(this.data['b'][i][2], this.data['b'][i][3]);
+                        game.physics.p2.enable(hole);
+                        hole.body.kinematic = true;
+                        hole.anchor.setTo(0.5, 0.5);
+                        hole.body.setCircle(hole.width/1.85);
+                        holes.push(hole);
+                    }
+                }
+                if (this.data['i']) {
+                    for (var i in this.data['i']) {
+                        if (this.data['i'][i]) {
+                            swirl.create('immovable object', this.data['i'][i][0], this.data['i'][i][1], false, false, this.data['i'][i][2], this.data['i'][i][3]);
+                        }
+                    }
+                }
+                player.body.x = this.data["p"][0];
+                player.body.y = this.data["p"][1];
+                player.body.velocity.x = this.data["p"][2];
+                player.body.velocity.y = this.data["p"][3];
+                friction = this.data["g"][0];
+                if (this.data["g"][1] == -1 || this.data["g"][1] > W) {
+                    game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+                } else {
+                    game.world.setBounds(0, 0, this.data["g"][1], this.data["g"][2]);
+                }
+                buildingMode = (this.data["g"][3] == 1);
+                if (this.data["g"][4]) {
+                    game.physics.p2.restitution = this.data["g"][4];
+                }
+                suckable = (this.data["g"][5] == 1);
+                if (this.data["g"][6]) {
+                    game.camera.x = this.data["g"][6];
+                    game.camera.y = this.data["g"][7];
+                }
+                swirl.setTrack(swirl.tracks[this.data["g"][8]]);
+                dieSound = (this.data["g"][9] == 1);
+                gridLock = (this.data['g'][10] == 1);
+                player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+
+                return this;
             }
-            buildingMode = (saveData["g"][3] == 1);
-            if (saveData["g"][4]) {
-                game.physics.p2.restitution = saveData["g"][4];
-            }
-            suckable = (saveData["g"][5] == 1);
-            if (saveData["g"][6]) {
-                game.camera.x = saveData["g"][6];
-                game.camera.y = saveData["g"][7];
-            }
-            this.setTrack(this.getTracks()[saveData["g"][8]]);
-            dieSound = (saveData["g"][9] == 1);
-            gridLock = (saveData['g'][10] == 1);
-            player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
+        },
+
+        /**
+         * Generates some save data.
+         * 
+         * @deprecated
+         * @memberof swirl
+         * @returns {SaveData} Some save data which represents the world when the function was called.
+         */
+        save: function() {
+            console.warn('Warning: swirl.save is deprecated and will be removed in the recent future.');
+            return new this.Save().store().data;
+        },
+        /**
+         * Loads some save data. 
+         * 
+         * @deprecated
+         * @memberof swirl
+         * @param {SaveData} data 
+         */
+        load: function(data) {
+            console.warn('Warning: swirl.load is deprecated and will be removed in the recent future.');
+            new this.Save(data).load();
         },
         /**
          * Runs a function on a set of sprites in the world.
          * If the selector is an array, the function will be ran on all sprites in that array.
-         * If the selector is a string, the function will be ran on all sprites of that type.
+         * If the selector is a string, the function will be ran on all sprites of the type specified.
          * If the selector is a function, the second parameter will be ignored and the function will be ran on all objects that exist.
          * 
          * @memberof swirl
@@ -299,7 +402,7 @@ window.addEventListener('load', function(){
          * @param {Function} [func]
          */
         onAll: function(selector, func) {
-            if (typeof(selector) === 'array') {
+            if (typeof(selector) === 'object') {
                 for (var i in selector) {
                     func(selector[i]);
                 }
@@ -390,7 +493,7 @@ window.addEventListener('load', function(){
             holes = [];
             objects = [];
             actions = [];
-            lastAction = undefined;
+            lastAction = void 0;
             friction = 4;
         },
         /**
@@ -540,7 +643,7 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/55)*55;
                         aty = Math.round(player.y/55)*55;
                     }
-                    lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'blackhole');
+                    lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'hole');
                     lastAction.name = 'hole';
                     lastAction.scale.setTo(0.055, 0.055);
                     game.physics.p2.enable(lastAction);
@@ -570,7 +673,7 @@ window.addEventListener('load', function(){
         },
 
         /**
-         * A callback which is tied to a sprite through [tieScript]{@link swirl.tieScript}.
+         * A callback which is tied to a sprite through [tieScript]{@link swirl.tieScript}. Only one script may be tied to a sprite at a time.
          * 
          * @memberof swirl
          * @callback tiedScript
@@ -578,11 +681,11 @@ window.addEventListener('load', function(){
          */
 
         /**
-         * Ties a callback to a sprite which executes upon impact with the player. Note that only one script may be tied to a sprite at a time.
+         * Ties a callback to a sprite which executes upon impact with the player.
          * 
          * @memberof swirl
          * @param {Phaser.Sprite} spr - The sprite to tie this script to.
-         * @param {tiedScript} scr - The script to tie to this sprite.
+         * @param {tiedScript} scr - The callback to tie to this sprite.
          */
         tieScript: function(spr, scr) {
             if (!spr.data) spr.data = {};
@@ -597,8 +700,8 @@ window.addEventListener('load', function(){
          */
         untieScript: function(sprite) {
             if (!spr.data) spr.data = {};
-            spr.data.script = undefined;
-            spr.data.scriptEnabled = undefined;
+            spr.data.script = void 0;
+            spr.data.scriptEnabled = void 0;
         },
         /**
          * Returns the script tied to a sprite, if there is one.
@@ -683,7 +786,7 @@ window.addEventListener('load', function(){
     let objects = [];
     let actions = [];
     let lines = [];
-    let player, obstacle, circle, hole, keylist, mobile, music, currentTrack, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
+    let player, obstacle, circle, hole, keylist, mobile, music, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
 
     let friction = 4;
     let buildingMode, suckable, isChasing, dieSound, gridLock = false;
@@ -776,24 +879,24 @@ window.addEventListener('load', function(){
         }
     }
 
-    function clientLoadSave(data) {
-        let result, didErr = false;
+    function safeLoadSave(data) {
+        if (!data) return;
         let save = data.split('\n');
-        try {
-            result = JSON.parse(swirl.decode(save[0]));
-        } catch(err) {
-            didErr = true;
-        }
-
-        if (!didErr && result) {
-            swirl.load(result);
-        }
+        if (!save[0]) return;
 
         try {
-            let d = swirl.base64(save[1]);
-            eval(d);
+            new swirl.Save().import(save[0]).load();
         } catch(err) {
-            errorInScript(err);
+            console.warn('Failed to load save file: ' + err);
+        }
+
+        if (save[1]) {
+            try {
+                let d = swirl.decodeb64(save[1]);
+                eval(d);
+            } catch(err) {
+                errorInScript(err);
+            }
         }
     }
 
@@ -957,7 +1060,7 @@ window.addEventListener('load', function(){
 
     function openDeveloperTools() {
         if (isClient) {
-            return electronSendMessage('devtools');
+            return swirlDesktopApp.send('devtools');
         }
         return false;
     }
@@ -1056,7 +1159,7 @@ window.addEventListener('load', function(){
                     let thisData = e2.target.result;
                     let fileExtension = files[0].name.split('.').pop();
                     if (fileExtension === 'swirl') {
-                        clientLoadSave(thisData);
+                        safeLoadSave(thisData);
                     } else {
                         try {
                             eval(thisData);
@@ -1156,11 +1259,11 @@ window.addEventListener('load', function(){
         refreshText();
 
         if (isClient) {
-            electronSendMessage('inspect').then(thisData => {
+            swirlDesktopApp.send('inspect').then(thisData => {
                 if (thisData) {
-                    let fileExtension = electronArgs[1].split('.').pop();
+                    let fileExtension = swirlDesktopApp.argv[1].split('.').pop();
                     if (fileExtension === 'swirl') {
-                        clientLoadSave(thisData);
+                        safeLoadSave(thisData);
                     } else {
                         try {
                             eval(thisData);
@@ -1174,35 +1277,12 @@ window.addEventListener('load', function(){
             let result, didErr = false;
             let save = currentURL.searchParams.get("load");
             let script = currentURL.searchParams.get("script");
-            if (save) {
-                try {
-                    result = JSON.parse(swirl.decode(save));
-                } catch(err) {
-                    didErr = true;
-                }
 
-                if (!didErr && result) {
-                    swirl.load(result);
-                } else {
-                    game.paused = true;
-                    game.input.keyboard.stop();
-                    swal({
-                        type: 'error',
-                        title: 'Corrupted Save',
-                        text: 'The save file you have attempted to load is corrupted or invalid.'
-                    }).then(() => {
-                        game.paused = false;
-                        game.input.keyboard.start();
-                    });
-                }
-            }
+            let formatted = save;
             if (script) {
-                try {
-                    eval(swirl.base64(script));
-                } catch(err) {
-                    errorInScript(err);
-                }
+                formatted = formatted + '\n' + script;
             }
+            safeLoadSave(formatted);
         }
     }
 
@@ -1362,16 +1442,15 @@ window.addEventListener('load', function(){
             gridLock = !gridLock;
             player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
         } else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
-            var b64data = swirl.encode(JSON.stringify(swirl.save()));
+            var data = new swirl.Save().store().export();
             if (isClient) {
-                electronSendMessage('save', b64data);
+                swirlDesktopApp.send('save', b64data);
             } else {
-                var prefix = "https://atenfyr.github.io/swirl/?load="
                 game.input.keyboard.stop();
                 swal({
                     type: 'success',
                     title: 'Saved',
-                    html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">' + prefix + b64data + '</textarea>'
+                    html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">https://atenfyr.github.io/swirl/?load=' + data + '</textarea>'
                 }).then(() => {
                     game.paused = false;
                     game.input.keyboard.start();
@@ -1381,16 +1460,16 @@ window.addEventListener('load', function(){
 
         if (isClient) {
             if (keylist.fullscreen.justDown) {
-                electronSendMessage('fullscreen');
+                swirlDesktopApp.send('fullscreen');
             } else if (keylist.refreshPage.justDown) {
                 window.location.reload();
             } else if (keylist.loadSave.justDown) {
-                electronSendMessage('load').then(thisDataArr => {
+                swirlDesktopApp.send('load').then(thisDataArr => {
                     if (thisDataArr) {
                         let thisData = thisDataArr[0];
                         let fileExtension = thisDataArr[1];
                         if (fileExtension === 'swirl') {
-                            clientLoadSave(thisData);
+                            safeLoadSave(thisData);
                         } else {
                             try {
                                 eval(thisData);

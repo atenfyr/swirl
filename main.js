@@ -1,12 +1,12 @@
 const path = require('path');
 const fs = require('fs');
-const isValid = require('is-valid-path');
 
 const electron = require('electron');
 const {app, dialog, shell, ipcMain} = require('electron');
 const {autoUpdater} = require('electron-updater');
 
 let mainWindow;
+
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
     mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: false, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title:"Swirl", icon:'./assets/images/logo.png', show: false});
@@ -15,19 +15,19 @@ function createWindow() {
 
     ipcMain.on('swirl_inspect', (event) => {
         let selectedPath = process.argv[1];
-        if (selectedPath && isValid(selectedPath) && !fs.lstatSync(selectedPath).isDirectory()) {
+        try {
             event.sender.send('rswirl_inspect', fs.readFileSync(selectedPath, 'utf-8'));
-        } else {
+        } catch(err) {
             event.sender.send('rswirl_inspect', false);
         }
     });
 
     ipcMain.on('swirl_save', (event, data) => {
         dialog.showSaveDialog(mainWindow, {"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
-            if (savePath) {
+            try {
                 fs.writeFileSync(savePath, data, 'utf-8');
                 event.sender.send('rswirl_save', savePath);
-            } else {
+            } catch(err) {
                 event.sender.send('rswirl_save', false);
             }
         });
@@ -35,9 +35,9 @@ function createWindow() {
 
     ipcMain.on('swirl_load', (event) => {
         dialog.showOpenDialog(mainWindow, {"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name":"JavaScript", "extensions":["js"]}]}, function(loadPath) {
-            if (loadPath && loadPath.length != 0 && isValid(loadPath[0]) && !fs.lstatSync(loadPath[0]).isDirectory()) {
+            try {
                 event.sender.send('rswirl_load', [fs.readFileSync(loadPath[0], 'utf-8'), loadPath[0].split('.').pop()]);
-            } else {
+            } catch(err) {
                 event.sender.send('rswirl_load', false);
             }
         });
