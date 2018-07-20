@@ -220,34 +220,80 @@ window.addEventListener('load', function(){
              * Creates a save file.
              * 
              * @param {SaveData} [data] - The save data to give this save file. Defaults to nothing.
+             * @param {string} [script] - JavaScript code saved as a string to give this save file as a script. Defaults to nothing.
              */
-            constructor(data) {
-                if (data) {
-                    this.data = data;
-                }
+            constructor(data, script) {
+                if (data instanceof Object) this.data = data;
+                this.script = script;
             }
 
             /**
-             * Imports a string and sets this save data to it.
+             * Imports an encoded string and sets this save data to it.
              * 
-             * @param {string} data - Some save data stored as a string.
+             * @param {string} data - Some encoded save data.
+             * @param {string} [mode] - The method of encoding. If left unspecified, will attempt to detect the method. Can be "file," "url," or "raw."
              * @returns {Save} this
              * @see Save.export 
              */
-            import(data) {
-                this.data = JSON.parse(swirl.decode(data));
+            import(data, mode) {
+                if (data.substring(0,10) === 'SWIRL26(1+') {
+                    data = data.substring(10);
+                    if (!mode) mode = 'file';
+                } else if (data.substring(0,4) === 'http') {
+                    if (!mode) mode = 'url';
+                }
+
+                this.data = void 0;
+                this.script = void 0;
+                switch(mode) {
+                    case 'file':
+                        let save = data.split('\n');
+                        if (save[0]) this.data = JSON.parse(swirl.decode(save[0]));
+                        if (save[1]) this.script = swirl.decodeb64(save[1]);
+                        break;
+                    case 'url':
+                        let thisSearch = new URL(data).searchParams;
+                        if (thisSearch.get('load')) {
+                            this.data = JSON.parse(swirl.decode(thisSearch.get('load')));
+                        }
+                        if (thisSearch.get('script')) {
+                            this.script = swirl.decodeb64(thisSearch.get('script'));
+                        }
+                        break;
+                    default:
+                        this.data = JSON.parse(swirl.decode(data));
+                }
+
                 return this;
             }
 
             /**
-             * Exports the save data as a string.
+             * Exports the save data.
              * 
+             * @param {string} [mode] - The way the save data should be encoded. Defaults to "raw." Can be "file," "url," or "raw."
              * @returns {string} - A string representing a save file.
-             * @see Save.import 
+             * @see Save.import
              */
-            export() {
-                if (!this.data || typeof(this.data) !== 'object' || Object.keys(this.data).length === 0) throw new Error('No data in this save file');
-                return swirl.encode(JSON.stringify(this.data));
+            export(mode) {
+                switch(mode) {
+                    case 'file':
+                        let data = 'SWIRL26(1+\n';
+                        if (this.data) data += swirl.encode(JSON.stringify(this.data));
+                        data += '\n';
+                        if (this.script) data += swirl.encodeb64(this.script);
+
+                        return data;
+                        break; // I know this break is unnecessary but I feel nervous if it isn't there
+                    case 'url':
+                        let modelURL = new URL('https://atenfyr.github.io/swirl/');
+                        if (this.data) modelURL.searchParams.set('load', swirl.encode(JSON.stringify(this.data)));
+                        if (this.script) modelURL.searchParams.set('script', this.script);
+                        return modelURL.href;
+                        break;
+                    default:
+                        if (!this.data) return '';
+                        return swirl.encode(JSON.stringify(this.data));
+                }
             }
 
             /**
@@ -776,7 +822,7 @@ window.addEventListener('load', function(){
         }
     }
 
-    let currentURL = new URL(window.location.href);
+    let currentURL = new URL(window.location.href).searchParams;
     let defaultFont = {font: "15px Consolas", fill: "#fff"};
                     
     let obstacles = [];
@@ -881,22 +927,10 @@ window.addEventListener('load', function(){
 
     function safeLoadSave(data) {
         if (!data) return;
-        let save = data.split('\n');
-        if (!save[0]) return;
-
         try {
-            new swirl.Save().import(save[0]).load();
+            new swirl.Save().import(data, 'file').load();
         } catch(err) {
             console.warn('Failed to load save file: ' + err);
-        }
-
-        if (save[1]) {
-            try {
-                let d = swirl.decodeb64(save[1]);
-                eval(d);
-            } catch(err) {
-                errorInScript(err);
-            }
         }
     }
 
@@ -1111,7 +1145,7 @@ window.addEventListener('load', function(){
         game.load.image('box', 'assets/images/box.png');
         game.load.image('circle', 'assets/images/circle.png');
         game.load.image('cat', 'assets/images/cat.png');
-        game.load.image('blackhole', 'assets/images/blackhole.png');
+        game.load.image('hole', 'assets/images/hole.png');
         game.load.image('immovable', 'assets/images/immovable.png');
         
         game.load.audio('mii', 'assets/audio/music/mii.mp3');
@@ -1158,7 +1192,7 @@ window.addEventListener('load', function(){
                 reader.onload = function(e2) {
                     let thisData = e2.target.result;
                     let fileExtension = files[0].name.split('.').pop();
-                    if (fileExtension === 'swirl') {
+                    if (fileExtension === 'swirl' || thisData.substring(0,10) === 'SWIRL26(1+') {
                         safeLoadSave(thisData);
                     } else {
                         try {
@@ -1186,9 +1220,9 @@ window.addEventListener('load', function(){
         graphics.lineStyle(3, 0x00FF00, 1);
 
         mobile = !(game.device.desktop);
-        if ((currentURL.searchParams.get("mobile")) !== null) {
+        if ((currentURL.get("mobile")) !== null) {
             mobile = true;
-        } else if ((currentURL.searchParams.get("desktop")) !== null) {
+        } else if ((currentURL.get("desktop")) !== null) {
             mobile = false;
         }
         
@@ -1262,7 +1296,7 @@ window.addEventListener('load', function(){
             swirlDesktopApp.send('inspect').then(thisData => {
                 if (thisData) {
                     let fileExtension = swirlDesktopApp.argv[1].split('.').pop();
-                    if (fileExtension === 'swirl') {
+                    if (fileExtension === 'swirl' || thisData.substring(0,10) === 'SWIRL26(1+') {
                         safeLoadSave(thisData);
                     } else {
                         try {
@@ -1274,15 +1308,16 @@ window.addEventListener('load', function(){
                 }
             });
         } else {
-            let result, didErr = false;
-            let save = currentURL.searchParams.get("load");
-            let script = currentURL.searchParams.get("script");
+            let save = currentURL.get("load");
+            let script = currentURL.get("script");
 
-            let formatted = save;
-            if (script) {
-                formatted = formatted + '\n' + script;
+            if (save || script) {
+                let formatted = 'SWIRL26(1+' + (save || '');
+                if (script) {
+                    formatted = formatted + '\n' + script;
+                }
+                safeLoadSave(formatted);
             }
-            safeLoadSave(formatted);
         }
     }
 
@@ -1442,15 +1477,14 @@ window.addEventListener('load', function(){
             gridLock = !gridLock;
             player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
         } else if ((keylist.save.justDown) || (game.input.pointer1.justPressed() && game.input.pointer2.justPressed())) {
-            var data = new swirl.Save().store().export();
             if (isClient) {
-                swirlDesktopApp.send('save', b64data);
+                swirlDesktopApp.send('save', new swirl.Save().store().export('file'));
             } else {
                 game.input.keyboard.stop();
                 swal({
                     type: 'success',
                     title: 'Saved',
-                    html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">https://atenfyr.github.io/swirl/?load=' + data + '</textarea>'
+                    html: 'Copy and paste this link.<br><textarea readonly=true rows="3" cols="40">' + new swirl.Save().store().export('url') + '</textarea>'
                 }).then(() => {
                     game.paused = false;
                     game.input.keyboard.start();
@@ -1468,7 +1502,7 @@ window.addEventListener('load', function(){
                     if (thisDataArr) {
                         let thisData = thisDataArr[0];
                         let fileExtension = thisDataArr[1];
-                        if (fileExtension === 'swirl') {
+                        if (fileExtension === 'swirl' || thisData.substring(0,10) === 'SWIRL26(1+') {
                             safeLoadSave(thisData);
                         } else {
                             try {

@@ -1,3 +1,9 @@
+const args = require('command-line-args')([
+    {name: 'integration', alias: 'n', type: Boolean}, // enable node integration
+    {name: 'pretend', alias: 'p', type: Boolean}, // pretend we're using the web version
+    {name: 'dev', alias: 'd', type: Boolean} // open dev tools when starting
+]);
+
 const path = require('path');
 const fs = require('fs');
 
@@ -9,49 +15,62 @@ let mainWindow;
 
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
-    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: false, preload: path.join(__dirname, 'preload.js')}, width: display.width, height: display.height, title: "Swirl", icon: './assets/images/logo.png', show: false});
+    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: args.integration, preload: (args.pretend?(void 0):path.join(__dirname, 'preload.js'))}, width: display.width, height: display.height, title: "Swirl", icon: './assets/images/logo.png', show: false});
     mainWindow.maximize();
     mainWindow.loadURL(`file://${__dirname}/index.html`);
 
-    ipcMain.on('swirl_inspect', (event) => {
-        let selectedPath = process.argv[1];
-        try {
-            event.sender.send('rswirl_inspect', fs.readFileSync(selectedPath, 'utf-8'));
-        } catch(err) {
-            event.sender.send('rswirl_inspect', false);
-        }
-    });
-
-    ipcMain.on('swirl_save', (event, data) => {
-        dialog.showSaveDialog(mainWindow, {"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
-            try {
-                fs.writeFileSync(savePath, data, 'utf-8');
-                event.sender.send('rswirl_save', savePath);
-            } catch(err) {
-                event.sender.send('rswirl_save', false);
-            }
+    if (args.dev) mainWindow.webContents.openDevTools();
+    
+    if (!args.pretend) {
+        ipcMain.on('swirl_inspect', (event) => {
+            let selectedPath = process.argv[1];
+            fs.readFile(selectedPath, 'utf-8', (err, data) => {
+                if (err) {
+                    event.sender.send('rswirl_inspect', false);
+                } else {
+                    event.sender.send('rswirl_inspect', data);
+                }
+            });
         });
-    });
 
-    ipcMain.on('swirl_load', (event) => {
-        dialog.showOpenDialog(mainWindow, {"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name":"JavaScript", "extensions":["js"]}]}, function(loadPath) {
-            try {
-                event.sender.send('rswirl_load', [fs.readFileSync(loadPath[0], 'utf-8'), loadPath[0].split('.').pop()]);
-            } catch(err) {
-                event.sender.send('rswirl_load', false);
-            }
+        ipcMain.on('swirl_save', (event, data) => {
+            dialog.showSaveDialog(mainWindow, {"filters": [{"name": "Swirl Data File", "extensions": ["swirl"]}]}, function(savePath) {
+                if (savePath) {
+                    fs.writeFile(savePath, data, 'utf-8', err => {
+                        if (err) {
+                            event.sender.send('rswirl_save', false);
+                        } else {
+                            event.sender.send('rswirl_save', savePath);
+                        }
+                    });
+                }
+            });
         });
-    });
 
-    ipcMain.on('swirl_fullscreen', (event) => {
-        mainWindow.setFullScreen(!(mainWindow.isFullScreen()));
-        event.sender.send('rswirl_fullscreen', true);
-    });
+        ipcMain.on('swirl_load', (event) => {
+            dialog.showOpenDialog(mainWindow, {"properties": ["openFile"], "filters": [{"name": "Swirl Data File", "extensions": ["swirl"]},{"name": "JavaScript","extensions": ["js"]},{"name": "All Files","extensions": ['*']}]}, function(loadPath) {
+                if (loadPath && loadPath[0] && typeof(loadPath) === 'object') {
+                    fs.readFile(loadPath[0], 'utf-8', (err, data) => {
+                        if (err) {
+                            event.sender.send('rswirl_load', false);
+                        } else {
+                            event.sender.send('rswirl_load', [data, loadPath[0].split('.').pop()]);
+                        }
+                    });
+                }
+            });
+        });
 
-    ipcMain.on('swirl_devtools', (event) => {
-        mainWindow.webContents.openDevTools();
-        event.sender.send('rswirl_devtools', true);
-    });
+        ipcMain.on('swirl_fullscreen', (event) => {
+            mainWindow.setFullScreen(!(mainWindow.isFullScreen()));
+            event.sender.send('rswirl_fullscreen', true);
+        });
+
+        ipcMain.on('swirl_devtools', (event) => {
+            mainWindow.webContents.openDevTools();
+            event.sender.send('rswirl_devtools', true);
+        });
+    }
 
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
@@ -91,7 +110,7 @@ app.on('ready', function() {
 });
 
 app.on('browser-window-created', function(_,window) {
-    return window.setMenu(null);
+    window.setMenu(null);
 });
 
 app.on('window-all-closed', function() {

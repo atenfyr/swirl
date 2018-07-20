@@ -46,6 +46,7 @@
     "electron-builder": "^20.22.0"
   },
   "dependencies": {
+    "command-line-args": "^5.0.2",
     "electron-updater": "^3.0.3"
   }
 }
