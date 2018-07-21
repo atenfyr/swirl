@@ -9,25 +9,19 @@
     backwards-compatibility.
 */
 
-const electron = require('electron');
-const {ipcRenderer} = require('electron');
+const e = require('electron');
+const p = e.ipcRenderer;
 
 window.swirlDesktopApp = {};
 
-const messageWhitelist = ['inspect', 'save', 'load', 'fullscreen', 'devtools'];
-window.swirlDesktopApp.send = (msg, arg) => {
-    if (typeof(msg) !== 'string') throw new Error('Message must be a string');
-    msg = msg.toLowerCase();
-    
-    if (!messageWhitelist.includes(msg)) throw new Error('Invalid message');
-
-    return new Promise(resolve => {
-        ipcRenderer.send('swirl_' + msg, arg);
-        ipcRenderer.on('rswirl_' + msg, (event, result) => {
-            resolve(result);
-        });
+const w = ['inspect', 'save', 'load', 'fullscreen', 'devtools'];
+window.swirlDesktopApp.send = (m, a) => {
+    if (!w.includes(m)) throw new Error('Invalid message');
+    return new Promise(r => {
+        p.send(m, a);
+        p.on('_'+m, (_, v) => {r(v)});
     });
 }
 
-window.swirlDesktopApp.argv = electron.remote.process.argv;
-window.swirlDesktopApp.version = electron.remote.app.getVersion();
+window.swirlDesktopApp.argv = e.remote.process.argv;
+window.swirlDesktopApp.version = e.remote.app.getVersion();
