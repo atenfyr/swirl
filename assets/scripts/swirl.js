@@ -1,14 +1,42 @@
 const isClient = Boolean(window.swirlDesktopApp);
 
+let swirlVersion;
+if (isClient) {
+    swirlVersion = swirlDesktopApp.version;
+} else {
+    var req = new XMLHttpRequest();
+    req.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            try {
+                swirlVersion = JSON.parse(this.responseText).version;
+            } catch(err) {
+                console.warn('Failed to get version from package.json: ' + err);
+            }
+        }
+    }
+    req.overrideMimeType('application/json');
+    req.open('GET', 'package.json', true);
+    req.send();
+}
+
 window.addEventListener('load', function(){
     let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
     /**
-     * Swirl API for scripts. Note that scripts have access to everything defined in the source; the Swirl API is primarily for convenience.
+     * Swirl API for scripts. Note that scripts have access to everything defined in the source; the Swirl API is primarily for convenience and backwards-compatibility.
      * @namespace swirl
      */
     const swirl = {
+        /**
+         * Returns the current version of Swirl.
+         * 
+         * @memberof swirl
+         * @returns {number} The current version. Responds with "unknown" if the version has not been retrieved yet.
+         */
+        getVersion: function() {
+            return swirlVersion || 'unknown';
+        },
         /**
          * Returns the size of the screen.
          *
@@ -28,41 +56,39 @@ window.addEventListener('load', function(){
             let thisRectangle = game.world.getBounds();
             return [thisRectangle.width, thisRectangle.height];
         },
-        /**
-         * An array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
-         * 
-         * @memberof swirl
-         * @type {Array<string>}
-         */
-        tracks: [
+        trackList: [
             'none',
-            'mii'
+            'mii',
         ],
+        tracksMap: {
+            'none': void 0,
+            'mii': void 0
+        },
         currentTrack: 'none',
         /**
          * Returns an array of valid tracks which can be passed to [setTrack]{@link swirl.setTrack}.
          * 
-         * @deprecated
          * @memberof swirl
          * @returns {Array<string>} An array of valid tracks.
          */
         getTracks: function() {
-            console.warn('Warning: swirl.getTracks is deprecated and will be removed in the recent future.');
-            return tracks;
+            return this.trackList;
         },
         /**
-         * Switches the track to another song. See [tracks]{@link swirl.tracks} for a list of valid songs.
+         * Switches the track to another song. See [getTracks]{@link swirl.getTracks} for a list of valid songs.
          * 
          * @memberof swirl
-         * @param {string} [key] - The song to switch to. If unspecified or set to "none," calls [stopMusic]{@link swirl.stopMusic} instead.
+         * @param {string} [key] - The song to switch to. If unspecified, calls [stopMusic]{@link swirl.stopMusic} instead.
          */
         setTrack: function(key) {
-            if (this.tracks.indexOf(key) === -1) throw new Error('Invalid track');
+            if (key && key !== 'none' && this.getTracks().indexOf(key) === -1) throw new Error('Invalid track');
             this.stopMusic();
-            if (key === 'none' || !key) return;
 
-            game.add.audio(key).play('', 0, 0.75, true);
-            this.currentTrack = key;
+            if (game.cache.checkSoundKey(key)) {
+                if (!this.tracksMap[key]) this.tracksMap[key] = game.add.audio(key);
+                this.tracksMap[key].play('', 0, 0.75, true);
+                this.currentTrack = key;
+            }
         },
         /**
          * Returns the currently playing track.
@@ -79,8 +105,11 @@ window.addEventListener('load', function(){
          * @memberof swirl
          */
         stopMusic: function() {
-            game.sound.stopAll();
-            this.currentTrack = null;
+            let trackRightNow = this.getPlayingTrack();
+            if (trackRightNow && this.tracksMap[trackRightNow]) {
+                this.tracksMap[trackRightNow].stop();
+                this.currentTrack = void 0;
+            }
         },
         /**
          * Moves a sprite towards another sprite.
@@ -195,7 +224,7 @@ window.addEventListener('load', function(){
          * @property {number} 5 - Whether or not the konami code effect has been activated. (0 if not, 1 if so)
          * @property {number} 6 - The X value of the camera.
          * @property {number} 7 - The Y value of the camera.
-         * @property {number} 8 - The number (defined in [tracks]{@link swirl.tracks}) of the track currently playing.
+         * @property {number} 8 - The number (defined in [getTracks]{@link swirl.getTracks}) of the track currently playing.
          * @property {number} 9 - Whether or not entering black holes will play the "die" sound effect. (0 if not, 1 if so)
          * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
          */
@@ -332,8 +361,8 @@ window.addEventListener('load', function(){
                     }
                 }
     
-                let trackNumber = swirl.tracks.indexOf(swirl.currentTrack);
-                if (trackNumber === -1) { trackNumber = 0; }
+                let trackNumber = swirl.getTracks().indexOf(swirl.currentTrack);
+                if (trackNumber < 0) trackNumber = 0;
     
                 this.data["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
                 this.data["g"] = [friction, ((game.world.bounds["width"] == Infinity)?-1:game.world.bounds.width), ((game.world.bounds.height == Infinity)?-1:game.world.bounds["height"]), ((buildingMode)?1:0), game.physics.p2.restitution, ((suckable)?1:0), game.camera.x, game.camera.y, trackNumber, ((dieSound)?1:0), ((gridLock)?1:0)];
@@ -400,7 +429,7 @@ window.addEventListener('load', function(){
                         game.camera.x = this.data["g"][6];
                         game.camera.y = this.data["g"][7];
                     }
-                    swirl.setTrack(swirl.tracks[this.data["g"][8]]);
+                    swirl.setTrack(swirl.getTracks()[this.data["g"][8]]);
                     dieSound = (this.data["g"][9] == 1);
                     gridLock = (this.data['g'][10] == 1);
                     player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
@@ -950,7 +979,7 @@ window.addEventListener('load', function(){
         }
     }
     
-    // I get that I could probably use Phaser's built-in system for this, but I like mine more
+    // I guess I could probably use Phaser's built-in system for this, but I like mine more
     function frictionCheck(spr, noFriction) {
         if (spr.body) {
             if (spr['name'] == 'object') {
@@ -963,12 +992,8 @@ window.addEventListener('load', function(){
                 spr.anchor.setTo(0.5, 0.5);
             }
             if ((Math.abs(spr.body.x) >= Math.abs((game.world.bounds["width"])+500)) || (Math.abs(spr.body.y) >= (Math.abs(game.world.bounds["height"])+500))) {
-                if (spr["name"] == "player") {
-                    spr.kill();
-                    spr.reset(W/2, H/2);
-                    game.camera.reset(W/2, H/2);
-                    game.camera.follow(spr);
-                    game.camera.deadzone = new Phaser.Rectangle(0, 0, w, h);
+                if (spr.name === 'player') {
+                    swirl.resetPlayer();
                 } else {
                     spr.destroy();
                     return;
