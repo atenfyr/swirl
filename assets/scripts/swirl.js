@@ -36,8 +36,7 @@ window.addEventListener('load', function(){
          */
         tracks: [
             'none',
-            'mii',
-            'game',
+            'mii'
         ],
         currentTrack: 'none',
         /**
@@ -45,7 +44,7 @@ window.addEventListener('load', function(){
          * 
          * @deprecated
          * @memberof swirl
-         * @returns {Array} An array of valid tracks.
+         * @returns {Array<string>} An array of valid tracks.
          */
         getTracks: function() {
             console.warn('Warning: swirl.getTracks is deprecated and will be removed in the recent future.');
@@ -58,10 +57,11 @@ window.addEventListener('load', function(){
          * @param {string} [key] - The song to switch to. If unspecified or set to "none," calls [stopMusic]{@link swirl.stopMusic} instead.
          */
         setTrack: function(key) {
-            if (key === 'none' || !key) return this.stopMusic();
-            if (music) music.stop();
-            music = game.add.audio(key);
-            music.play('', 0, 0.75, true);
+            if (this.tracks.indexOf(key) === -1) throw new Error('Invalid track');
+            this.stopMusic();
+            if (key === 'none' || !key) return;
+
+            game.add.audio(key).play('', 0, 0.75, true);
             this.currentTrack = key;
         },
         /**
@@ -79,10 +79,7 @@ window.addEventListener('load', function(){
          * @memberof swirl
          */
         stopMusic: function() {
-            if (music) {
-                music.stop();
-            }
-            music = null;
+            game.sound.stopAll();
             this.currentTrack = null;
         },
         /**
@@ -150,12 +147,13 @@ window.addEventListener('load', function(){
             return atob(text.replace(/\./g, '+').replace(/\_/g, '/').replace(/\-/g, '='));
         },
         /**
-         * Serves as backwards compatibility for [decodeb64]{@link swirl.decodeb64}
+         * Decodes a string of text encoded in the URL-safe variant of Base64 that Swirl uses for storing scripts.
          * 
          * @deprecated
          * @memberof swirl
          * @param {string} text
          * @returns {string} Decoded text.
+         * @see swirl.decodeb64
         */
         base64: function(text) {
             console.warn('Warning: swirl.base64 is deprecated and will be removed in the recent future. Please use swirl.decodeb64.');
@@ -198,7 +196,7 @@ window.addEventListener('load', function(){
          * @property {number} 6 - The X value of the camera.
          * @property {number} 7 - The Y value of the camera.
          * @property {number} 8 - The number (defined in [tracks]{@link swirl.tracks}) of the track currently playing.
-         * @property {number} 9 - Whether or not entering black holes will trigger the "die" sound effect. (0 if not, 1 if so)
+         * @property {number} 9 - Whether or not entering black holes will play the "die" sound effect. (0 if not, 1 if so)
          * @property {number} 10 - Whether or not grid locking is enabled. (0 if not, 1 if so)
          */
 
@@ -233,7 +231,7 @@ window.addEventListener('load', function(){
              * @param {string} data - Some encoded save data.
              * @param {string} [mode] - The method of encoding. If left unspecified, will attempt to detect the method. Can be "file," "url," or "raw."
              * @returns {Save} this
-             * @see Save.export 
+             * @see swirl.Save.export 
              */
             import(data, mode) {
                 if (data.substring(0,10) === 'SWIRL26(1+') {
@@ -272,7 +270,7 @@ window.addEventListener('load', function(){
              * 
              * @param {string} [mode] - The way the save data should be encoded. Defaults to "raw." Can be "file," "url," or "raw."
              * @returns {string} - A string representing a save file.
-             * @see Save.import
+             * @see swirl.Save.import
              */
             export(mode) {
                 switch(mode) {
@@ -312,13 +310,13 @@ window.addEventListener('load', function(){
                 this.data["c"] = [];
                 for (var i in circles) {
                     if (!((Math.abs(circles[i].position.x) >= 100000) || (Math.abs(circles[i].position.y) >= 100000)) && circles[i].body) {
-                        this.data["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].angle), Math.floor(circles[i].body.angularVelocity)]);
+                        this.data["c"].push([Math.floor(circles[i].position.x), Math.floor(circles[i].position.y), Math.floor(circles[i].body.velocity.x), Math.floor(circles[i].body.velocity.y), Math.floor(circles[i].body.angle), Math.floor(circles[i].body.angularVelocity)]);
                     }
                 }
                 this.data["d"] = [];
                 for (var i in cats) {
                     if (!((Math.abs(cats[i].position.x) >= 100000) || (Math.abs(cats[i].position.y) >= 100000)) && cats[i].body) {
-                        this.data["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].angle), Math.floor(cats[i].body.angularVelocity)]);
+                        this.data["d"].push([Math.floor(cats[i].position.x), Math.floor(cats[i].position.y), Math.floor(cats[i].body.velocity.x), Math.floor(cats[i].body.velocity.y), Math.floor(cats[i].body.angle), Math.floor(cats[i].body.angularVelocity)]);
                     }
                 }
                 this.data["b"] = [];
@@ -334,7 +332,7 @@ window.addEventListener('load', function(){
                     }
                 }
     
-                let trackNumber = swirl.tracks.indexOf(swirl.getPlayingTrack());
+                let trackNumber = swirl.tracks.indexOf(swirl.currentTrack);
                 if (trackNumber === -1) { trackNumber = 0; }
     
                 this.data["p"] = [Math.floor(player.position.x), Math.floor(player.position.y), Math.floor(player.body.velocity.x), Math.floor(player.body.velocity.y)];
@@ -348,44 +346,39 @@ window.addEventListener('load', function(){
             /**
              * Loads this save file into the world.
              * 
-             * @param {Boolean} preventEval - If set to true, don't execute any scripts attached to this save file.
+             * @param {Boolean} preventEval - If set to true, doesn't execute any scripts attached to this save file.
              * @returns {Save} this
              */
             load(preventEval) {
                 if (this.data) {
                     swirl.resetCanvas();
                     for (var i in this.data["o"]) {
-                        if (this.data["o"][i]) {
-                            swirl.create('box', this.data['o'][i][0], this.data['o'][i][1], false, false, this.data['o'][i][2], this.data['o'][i][3]);
-                        }
+                        if (this.data["o"][i]) swirl.create('box', this.data['o'][i][0], this.data['o'][i][1], false, false, this.data['o'][i][2], this.data['o'][i][3]);
                     }
                     for (var i in this.data["c"]) {
                         if (this.data["c"][i]) {
-                            swirl.create('ball', this.data['c'][i][0], this.data['c'][i][1], false, false, this.data['c'][i][2], this.data['c'][i][3]);
+                            let ball = swirl.create('ball', this.data['c'][i][0], this.data['c'][i][1], false, false, this.data['c'][i][2], this.data['c'][i][3]);
+                            ball.body.angle = this.data['d'][i][4];
+                            ball.body.angularVelocity = this.data['d'][i][5];
                         }
                     }
                     for (var i in this.data["d"]) {
                         if (this.data["d"][i]) {
-                            swirl.create('cat', this.data['d'][i][0], this.data['d'][i][1], false, false, this.data['d'][i][2], this.data['d'][i][3]);
+                            let cat = swirl.create('cat', this.data['d'][i][0], this.data['d'][i][1], false, false, this.data['d'][i][2], this.data['d'][i][3]);
+                            cat.body.angle = this.data['d'][i][4];
+                            cat.body.angularVelocity = this.data['d'][i][5];
                         }
                     }
                     for (var i in this.data["b"]) {
                         if (this.data["b"][i]) {
-                            hole = game.add.sprite(this.data['b'][i][0], this.data['b'][i][1], hole);
-                            hole.name = 'hole';
+                            let hole = swirl.create('hole', this.data['b'][i][0], this.data['b'][i][1]);
                             hole.scale.setTo(this.data['b'][i][2], this.data['b'][i][3]);
-                            game.physics.p2.enable(hole);
-                            hole.body.kinematic = true;
-                            hole.anchor.setTo(0.5, 0.5);
                             hole.body.setCircle(hole.width/1.85);
-                            holes.push(hole);
                         }
                     }
-                    if (this.data['i']) {
-                        for (var i in this.data['i']) {
-                            if (this.data['i'][i]) {
-                                swirl.create('immovable object', this.data['i'][i][0], this.data['i'][i][1], false, false, this.data['i'][i][2], this.data['i'][i][3]);
-                            }
+                    for (var i in this.data["i"]) {
+                        if (this.data["i"][i]) {
+                            swirl.create('object', this.data["i"][i][0], this.data["i"][i][1], false, false, this.data["i"][i][2], this.data["i"][i][3]);
                         }
                     }
                     player.body.x = this.data["p"][0];
@@ -545,7 +538,6 @@ window.addEventListener('load', function(){
             holes = [];
             objects = [];
             actions = [];
-            lastAction = void 0;
             friction = 4;
         },
         /**
@@ -607,6 +599,7 @@ window.addEventListener('load', function(){
                 }
             }
 
+            let newObj;
             switch(type) {
                 case 'circle':
                 case 'sphere':
@@ -615,18 +608,18 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/35)*35;
                         aty = Math.round(player.y/35)*35;
                     }
-                    lastAction = game.add.sprite(atx, aty, 'circle');
-                    lastAction.name = 'circle';
-                    game.physics.p2.enable(lastAction);
-                    lastAction.body.setCircle(lastAction.width/2);
+                    newObj = game.add.sprite(atx, aty, 'circle');
+                    newObj.name = 'circle';
+                    game.physics.p2.enable(newObj);
+                    newObj.body.setCircle(newObj.width/2);
                     if (vx && vy) {
-                        lastAction.body.velocity.x = vx;
-                        lastAction.body.velocity.y = vy;
+                        newObj.body.velocity.x = vx;
+                        newObj.body.velocity.y = vy;
                     }
                     if (!dontAssociate) {
-                        cats.push(lastAction);
+                        cats.push(newObj);
                     }
-                    actions.push(lastAction);
+                    actions.push(newObj);
                     break;
                 case 'box':
                 case 'square':
@@ -636,18 +629,18 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/40)*40;
                         aty = Math.round(player.y/40)*40;
                     }
-                    lastAction = game.add.sprite(atx, aty, 'box');
-                    lastAction.name = 'obstacle';
-                    game.physics.p2.enable(lastAction);
-                    lastAction.body.kinematic = true;
+                    newObj = game.add.sprite(atx, aty, 'box');
+                    newObj.name = 'obstacle';
+                    game.physics.p2.enable(newObj);
+                    newObj.body.kinematic = true;
                     if (vx && vy) {
-                        lastAction.body.velocity.x = vx;
-                        lastAction.body.velocity.y = vy;
+                        newObj.body.velocity.x = vx;
+                        newObj.body.velocity.y = vy;
                     }
                     if (!dontAssociate) {
-                        obstacles.push(lastAction);
+                        obstacles.push(newObj);
                     }
-                    actions.push(lastAction);
+                    actions.push(newObj);
                     break;
                 case 'cat':
                 case 'kitten':
@@ -655,18 +648,18 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/100)*100;
                         aty = Math.round(player.y/100)*100;
                     }
-                    lastAction = game.add.sprite(atx, aty, 'cat');
-                    lastAction.name = 'cat';
-                    lastAction.scale.setTo(0.4, 0.4);
-                    game.physics.p2.enable(lastAction);
+                    newObj = game.add.sprite(atx, aty, 'cat');
+                    newObj.name = 'cat';
+                    newObj.scale.setTo(0.4, 0.4);
+                    game.physics.p2.enable(newObj);
                     if (vx && vy) {
-                        lastAction.body.velocity.x = vx;
-                        lastAction.body.velocity.y = vy;
+                        newObj.body.velocity.x = vx;
+                        newObj.body.velocity.y = vy;
                     }
                     if (!dontAssociate) {
-                        cats.push(lastAction);
+                        cats.push(newObj);
                     }
-                    actions.push(lastAction);
+                    actions.push(newObj);
                     break;
                 case 'immovable':
                 case 'object':
@@ -675,18 +668,18 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/40)*40;
                         aty = Math.round(player.y/40)*40;
                     }
-                    lastAction = game.add.sprite(atx, aty, 'immovable');
-                    lastAction.name = 'object';
-                    game.physics.p2.enable(lastAction);
-                    lastAction.body.kinematic = true;
+                    newObj = game.add.sprite(atx, aty, 'immovable');
+                    newObj.name = 'object';
+                    game.physics.p2.enable(newObj);
+                    newObj.body.kinematic = true;
                     if (vx && vy) {
-                        lastAction.body.velocity.x = vx;
-                        lastAction.body.velocity.y = vy;
+                        newObj.body.velocity.x = vx;
+                        newObj.body.velocity.y = vy;
                     }
                     if (!dontAssociate) {
-                        objects.push(lastAction);
+                        objects.push(newObj);
                     }
-                    actions.push(lastAction);
+                    actions.push(newObj);
                     break;
                 case 'hole':
                 case 'blackhole':
@@ -695,33 +688,34 @@ window.addEventListener('load', function(){
                         atx = Math.round(atx/55)*55;
                         aty = Math.round(player.y/55)*55;
                     }
-                    lastAction = game.add.sprite((atx || player.x), (aty || player.y), 'hole');
-                    lastAction.name = 'hole';
-                    lastAction.scale.setTo(0.055, 0.055);
-                    game.physics.p2.enable(lastAction);
-                    lastAction.body.kinematic = true;
-                    lastAction.anchor.setTo(0.5, 0.5);
-                    lastAction.body.setCircle(lastAction.width/1.85);
+                    newObj = game.add.sprite((atx || player.x), (aty || player.y), 'hole');
+                    newObj.name = 'hole';
+                    newObj.scale.setTo(0.055, 0.055);
+                    game.physics.p2.enable(newObj);
+                    newObj.body.kinematic = true;
+                    newObj.anchor.setTo(0.5, 0.5);
+                    newObj.body.setCircle(newObj.width/1.85);
                     if (vx && vy) {
-                        lastAction.body.velocity.x = vx;
-                        lastAction.body.velocity.y = vy;
+                        newObj.body.velocity.x = vx;
+                        newObj.body.velocity.y = vy;
                     }
                     if (!dontAssociate) {
-                        holes.push(lastAction);
+                        holes.push(newObj);
                     }
-                    actions.push(lastAction);
+                    actions.push(newObj);
                     break;
                 default:
                     return false;
-                    break;
             }
+
             if (isChasing) {
-                if (lastAction.name != 'hole') {
-                    lastAction.tint = 0xFF0000;
-                    lastAction.name = 'dangerous';
+                if (newObj.name !== 'hole') {
+                    newObj.tint = 0xFF0000;
+                    newObj.name = 'dangerous';
                 }
             }
-            return lastAction;
+
+            return newObj;
         },
 
         /**
@@ -828,7 +822,6 @@ window.addEventListener('load', function(){
         }
     }
 
-    let currentURL = new URL(window.location.href).searchParams;
     let defaultFont = {font: "15px Consolas", fill: "#fff"};
                     
     let obstacles = [];
@@ -838,7 +831,7 @@ window.addEventListener('load', function(){
     let objects = [];
     let actions = [];
     let lines = [];
-    let player, obstacle, circle, hole, keylist, mobile, music, dieAudio, lastAction, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics, cheatMode, disableTransform;
+    let player, obstacle, circle, hole, keylist, mobile, dieAudio, tipText, lives, livesText, timerText, textGroup, countdown, countdownEvent, hasWon, graphics;
 
     let friction = 4;
     let buildingMode, suckable, isChasing, dieSound, gridLock = false;
@@ -1156,7 +1149,6 @@ window.addEventListener('load', function(){
         
         game.load.audio('mii', 'assets/audio/music/mii.mp3');
         game.load.audio('die', 'assets/audio/die.mp3');
-        game.load.audio('game', 'assets/audio/game.mp3');
         game.load.audio('glass', 'assets/audio/glass.mp3');
         textGroup = game.add.group();
     }
@@ -1226,12 +1218,6 @@ window.addEventListener('load', function(){
         graphics.lineStyle(3, 0x00FF00, 1);
 
         mobile = !(game.device.desktop);
-        if ((currentURL.get("mobile")) !== null) {
-            mobile = true;
-        } else if ((currentURL.get("desktop")) !== null) {
-            mobile = false;
-        }
-        
         dieAudio = game.add.audio('die');
         this.swipe = new Swipe(this.game);
         
@@ -1271,19 +1257,15 @@ window.addEventListener('load', function(){
             buildingMode = false;
             dieSound = false;
             friction = 4;
-            if (music) {
-                music.stop();
-            }
-            if (!disableTransform) {
-                swirl.onAll(function(sprite) { // make all pre-existing sprites dangerous
-                    if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
-                        sprite.tint = 0xFF0000;
-                        sprite.name = 'dangerous';
-                        sprite.body.dynamic = true;
-                        game.physics.p2.enable(sprite);
-                    }
-                });
-            }
+            swirl.stopMusic();
+            swirl.onAll(function(sprite) { // make all pre-existing sprites dangerous
+                if (sprite.name != 'hole' && sprite.name != 'player' && sprite.body) {
+                    sprite.tint = 0xFF0000;
+                    sprite.name = 'dangerous';
+                    sprite.body.dynamic = true;
+                    game.physics.p2.enable(sprite);
+                }
+            });
             lives = 5;
             tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
             livesText = game.add.text(5, H-30, "5 lives remaining", {font: "20px Consolas", fill: "#fff"});
@@ -1314,16 +1296,7 @@ window.addEventListener('load', function(){
                 }
             });
         } else {
-            let save = currentURL.get("load");
-            let script = currentURL.get("script");
-
-            if (save || script) {
-                let formatted = 'SWIRL26(1+' + (save || '');
-                if (script) {
-                    formatted = formatted + '\n' + script;
-                }
-                safeLoadSave(formatted);
-            }
+            new swirl.Save().import(window.location.href, 'url').load();
         }
     }
 
@@ -1393,11 +1366,11 @@ window.addEventListener('load', function(){
                 let newX = game.world.randomX;
                 let newY = game.world.randomY;
                 if ((Phaser.Math.distance(newX, newY, player.x, player.y) >= 300)) {
-                    swirl.create('random', newX, newY, false, true);
-                    lastAction.tint = 0xFF0000;
-                    lastAction.name = 'dangerous';
-                    lastAction.body.dynamic = true;
-                    game.physics.p2.enable(lastAction);
+                    let newObj = swirl.create('random', newX, newY, false, true);
+                    newObj.tint = 0xFF0000;
+                    newObj.name = 'dangerous';
+                    newObj.body.dynamic = true;
+                    game.physics.p2.enable(newObj);
                 }
             }
         }
@@ -1468,7 +1441,7 @@ window.addEventListener('load', function(){
         if (keylist.easter.justDown && !(keylist.easter.ctrlKey)) {
             swirl.create('cat', player.x, player.y, gridLock);
         } else if (keylist.object.justDown && !(keylist.object.ctrlKey)) {
-            swirl.create('immovable object', player.x, player.y, gridLock);
+            swirl.create('object', player.x, player.y, gridLock);
         } else if (keylist.vacuum.isDown) {
             game.world.forEachExists(moveTowards, this, player, 25);
         } else if (keylist.expand.justDown && !(keylist.expand.ctrlKey) && !isChasing) {
@@ -1530,7 +1503,7 @@ window.addEventListener('load', function(){
             player.body.y -= 10;
         }
         
-        if ((keylist.hole.justDown && player.alive) || (cheatMode && isChasing && keylist.hole.isDown && player.alive)) {
+        if (keylist.hole.justDown && player.alive) {
             swirl.create('black hole', player.x, player.y, gridLock);
         } else if (keylist.move2.justDown && player.alive) {
             swirl.create('ball', player.x, player.y, gridLock);
@@ -1559,19 +1532,17 @@ window.addEventListener('load', function(){
                 confirmButtonText: 'hack',
                 cancelButtonText: 'cancel'
             }).then(input => {
-                if (input["value"]) {
+                if (input.value) {
                     let resp, mode = "success";
-                    if (input["value"].charAt(input["value"].length-1) == ";") {
-                        input["value"] = input["value"].slice(0, -1);
-                    }
                     try {
-                        resp = eval(input["value"]);
+                        resp = eval(input.value);
                     } catch(err) {
                         mode = "error";
                         resp = err;
                     }
+
                     swal({
-                        title: (mode === "success")?"you did a good hack":"you did a bad hack",
+                        title: "you did a " + ((mode === "success")?"good":"bad") + " hack",
                         html: '<textarea readonly=true rows="3" cols="40">' + resp + '</textarea>',
                         type: mode
                     }).then(() => {
