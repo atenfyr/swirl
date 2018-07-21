@@ -277,7 +277,7 @@ window.addEventListener('load', function(){
             export(mode) {
                 switch(mode) {
                     case 'file':
-                        let data = 'SWIRL26(1+\n';
+                        let data = 'SWIRL26(1+';
                         if (this.data) data += swirl.encode(JSON.stringify(this.data));
                         data += '\n';
                         if (this.script) data += swirl.encodeb64(this.script);
@@ -287,7 +287,7 @@ window.addEventListener('load', function(){
                     case 'url':
                         let modelURL = new URL('https://atenfyr.github.io/swirl/');
                         if (this.data) modelURL.searchParams.set('load', swirl.encode(JSON.stringify(this.data)));
-                        if (this.script) modelURL.searchParams.set('script', this.script);
+                        if (this.script) modelURL.searchParams.set('script', swirl.encodeb64(this.script));
                         return modelURL.href;
                         break;
                     default:
@@ -348,68 +348,74 @@ window.addEventListener('load', function(){
             /**
              * Loads this save file into the world.
              * 
+             * @param {Boolean} preventEval - If set to true, don't execute any scripts attached to this save file.
              * @returns {Save} this
              */
-            load() {
-                if (!this.data || typeof(this.data) !== 'object' || Object.keys(this.data).length === 0) throw new Error('No data in this save file');
-                swirl.resetCanvas();
-                for (var i in this.data["o"]) {
-                    if (this.data["o"][i]) {
-                        swirl.create('box', this.data['o'][i][0], this.data['o'][i][1], false, false, this.data['o'][i][2], this.data['o'][i][3]);
-                    }
-                }
-                for (var i in this.data["c"]) {
-                    if (this.data["c"][i]) {
-                        swirl.create('ball', this.data['c'][i][0], this.data['c'][i][1], false, false, this.data['c'][i][2], this.data['c'][i][3]);
-                    }
-                }
-                for (var i in this.data["d"]) {
-                    if (this.data["d"][i]) {
-                        swirl.create('cat', this.data['d'][i][0], this.data['d'][i][1], false, false, this.data['d'][i][2], this.data['d'][i][3]);
-                    }
-                }
-                for (var i in this.data["b"]) {
-                    if (this.data["b"][i]) {
-                        hole = game.add.sprite(this.data['b'][i][0], this.data['b'][i][1], hole);
-                        hole.name = 'hole';
-                        hole.scale.setTo(this.data['b'][i][2], this.data['b'][i][3]);
-                        game.physics.p2.enable(hole);
-                        hole.body.kinematic = true;
-                        hole.anchor.setTo(0.5, 0.5);
-                        hole.body.setCircle(hole.width/1.85);
-                        holes.push(hole);
-                    }
-                }
-                if (this.data['i']) {
-                    for (var i in this.data['i']) {
-                        if (this.data['i'][i]) {
-                            swirl.create('immovable object', this.data['i'][i][0], this.data['i'][i][1], false, false, this.data['i'][i][2], this.data['i'][i][3]);
+            load(preventEval) {
+                if (this.data) {
+                    swirl.resetCanvas();
+                    for (var i in this.data["o"]) {
+                        if (this.data["o"][i]) {
+                            swirl.create('box', this.data['o'][i][0], this.data['o'][i][1], false, false, this.data['o'][i][2], this.data['o'][i][3]);
                         }
                     }
+                    for (var i in this.data["c"]) {
+                        if (this.data["c"][i]) {
+                            swirl.create('ball', this.data['c'][i][0], this.data['c'][i][1], false, false, this.data['c'][i][2], this.data['c'][i][3]);
+                        }
+                    }
+                    for (var i in this.data["d"]) {
+                        if (this.data["d"][i]) {
+                            swirl.create('cat', this.data['d'][i][0], this.data['d'][i][1], false, false, this.data['d'][i][2], this.data['d'][i][3]);
+                        }
+                    }
+                    for (var i in this.data["b"]) {
+                        if (this.data["b"][i]) {
+                            hole = game.add.sprite(this.data['b'][i][0], this.data['b'][i][1], hole);
+                            hole.name = 'hole';
+                            hole.scale.setTo(this.data['b'][i][2], this.data['b'][i][3]);
+                            game.physics.p2.enable(hole);
+                            hole.body.kinematic = true;
+                            hole.anchor.setTo(0.5, 0.5);
+                            hole.body.setCircle(hole.width/1.85);
+                            holes.push(hole);
+                        }
+                    }
+                    if (this.data['i']) {
+                        for (var i in this.data['i']) {
+                            if (this.data['i'][i]) {
+                                swirl.create('immovable object', this.data['i'][i][0], this.data['i'][i][1], false, false, this.data['i'][i][2], this.data['i'][i][3]);
+                            }
+                        }
+                    }
+                    player.body.x = this.data["p"][0];
+                    player.body.y = this.data["p"][1];
+                    player.body.velocity.x = this.data["p"][2];
+                    player.body.velocity.y = this.data["p"][3];
+                    friction = this.data["g"][0];
+                    if (this.data["g"][1] == -1 || this.data["g"][1] > W) {
+                        game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
+                    } else {
+                        game.world.setBounds(0, 0, this.data["g"][1], this.data["g"][2]);
+                    }
+                    buildingMode = (this.data["g"][3] == 1);
+                    if (this.data["g"][4]) {
+                        game.physics.p2.restitution = this.data["g"][4];
+                    }
+                    suckable = (this.data["g"][5] == 1);
+                    if (this.data["g"][6]) {
+                        game.camera.x = this.data["g"][6];
+                        game.camera.y = this.data["g"][7];
+                    }
+                    swirl.setTrack(swirl.tracks[this.data["g"][8]]);
+                    dieSound = (this.data["g"][9] == 1);
+                    gridLock = (this.data['g'][10] == 1);
+                    player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
                 }
-                player.body.x = this.data["p"][0];
-                player.body.y = this.data["p"][1];
-                player.body.velocity.x = this.data["p"][2];
-                player.body.velocity.y = this.data["p"][3];
-                friction = this.data["g"][0];
-                if (this.data["g"][1] == -1 || this.data["g"][1] > W) {
-                    game.world.setBounds(-Infinity, -Infinity, Infinity, Infinity);
-                } else {
-                    game.world.setBounds(0, 0, this.data["g"][1], this.data["g"][2]);
+
+                if (this.script && !preventEval) {
+                    eval(this.script);
                 }
-                buildingMode = (this.data["g"][3] == 1);
-                if (this.data["g"][4]) {
-                    game.physics.p2.restitution = this.data["g"][4];
-                }
-                suckable = (this.data["g"][5] == 1);
-                if (this.data["g"][6]) {
-                    game.camera.x = this.data["g"][6];
-                    game.camera.y = this.data["g"][7];
-                }
-                swirl.setTrack(swirl.tracks[this.data["g"][8]]);
-                dieSound = (this.data["g"][9] == 1);
-                gridLock = (this.data['g'][10] == 1);
-                player.tint = gridLock?'0xADD8E6':'0xFFFFFF';
 
                 return this;
             }
@@ -1480,6 +1486,7 @@ window.addEventListener('load', function(){
             if (isClient) {
                 swirlDesktopApp.send('save', new swirl.Save().store().export('file'));
             } else {
+                game.paused = true;
                 game.input.keyboard.stop();
                 swal({
                     type: 'success',

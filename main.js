@@ -17,9 +17,8 @@ function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
     mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: args.integration, preload: (args.pretend?(void 0):path.join(__dirname, 'preload.js'))}, width: display.width, height: display.height, title: "Swirl", icon: './assets/images/logo.png', show: false});
     mainWindow.maximize();
-    mainWindow.loadURL(`file://${__dirname}/index.html`);
-
     if (args.dev) mainWindow.webContents.openDevTools();
+    mainWindow.loadURL(`file://${__dirname}/index.html`);
     
     if (!args.pretend) {
         ipcMain.on('swirl_inspect', (event) => {
