@@ -56,7 +56,7 @@ window.addEventListener('load', function(){
             let thisRectangle = game.world.getBounds();
             return [thisRectangle.width, thisRectangle.height];
         },
-        trackList: [
+        tracksList: [
             'none',
             'mii',
         ],
@@ -72,7 +72,7 @@ window.addEventListener('load', function(){
          * @returns {Array<string>} An array of valid tracks.
          */
         getTracks: function() {
-            return this.trackList;
+            return this.tracksList;
         },
         /**
          * Switches the track to another song. See [getTracks]{@link swirl.getTracks} for a list of valid songs.
@@ -312,7 +312,7 @@ window.addEventListener('load', function(){
                         return data;
                         break; // I know this break is unnecessary but I feel nervous if it isn't there
                     case 'url':
-                        let modelURL = new URL('https://atenfyr.github.io/swirl/');
+                        let modelURL = new URL(window.location.protocol + "//" + window.location.host + window.location.pathname);
                         if (this.data) modelURL.searchParams.set('load', swirl.encode(JSON.stringify(this.data)));
                         if (this.script) modelURL.searchParams.set('script', swirl.encodeb64(this.script));
                         return modelURL.href;
@@ -1010,9 +1010,9 @@ window.addEventListener('load', function(){
         } else if (spr && spr.body && (friction != 0)) {
             if (!noFriction) {
                 if (spr.body.velocity.x > 0) {
-                    spr.body.velocity.x -= (friction);
+                    spr.body.velocity.x -= friction;
                 } else if (spr.body.velocity.x < 0) {
-                    spr.body.velocity.x += (friction);
+                    spr.body.velocity.x += friction;
                 } else {
                     spr.body.velocity.x = 0;
                 }
@@ -1023,9 +1023,9 @@ window.addEventListener('load', function(){
             
             if (!noFriction) {
                 if (spr.body.velocity.y > 0) {
-                    spr.body.velocity.y -= (friction);
+                    spr.body.velocity.y -= friction;
                 } else if (spr.body.velocity.y < 0) {
-                    spr.body.velocity.y += (friction);
+                    spr.body.velocity.y += friction;
                 } else {
                     spr.body.velocity.y = 0;
                 }
@@ -1321,7 +1321,11 @@ window.addEventListener('load', function(){
                 }
             });
         } else {
-            new swirl.Save().import(window.location.href, 'url').load();
+            try {
+                new swirl.Save().import(window.location.href, 'url').load();
+            } catch(err) {
+                console.warn('Failed to load save file: ' + err);
+            }
         }
     }
 
@@ -1330,7 +1334,7 @@ window.addEventListener('load', function(){
             game.world.forEachAlive(moveToHole, this);
         }
         
-        if (player.body == null) {
+        if (player.body === null) {
             player = game.add.sprite(game.world.centerX, game.world.centerY, 'player');
             player.name = 'player';
             game.physics.p2.enable(player);
