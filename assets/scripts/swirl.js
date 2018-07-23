@@ -22,6 +22,7 @@ if (isClient) {
 window.addEventListener('load', function(){
     let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    const defaultFontType = 'Consolas, Monaco, sans-serif';
 
     /**
      * Swirl API for scripts. Note that scripts have access to everything defined in the source; the Swirl API is primarily for convenience and backwards-compatibility.
@@ -851,7 +852,7 @@ window.addEventListener('load', function(){
         }
     }
 
-    let defaultFont = {font: "15px Consolas", fill: "#fff"};
+    let defaultFont = {font: defaultFontType, fontSize: 15, fill: "#fff"};
                     
     let obstacles = [];
     let circles = []
@@ -869,13 +870,6 @@ window.addEventListener('load', function(){
     
     function roundToHundredths(x) {
         return Math.round(100*x)/100;
-    }
-
-    function konamiCode() {
-        if (buildingMode) {
-            buildingMode = false;
-        }
-        suckable = true;
     }
     
     // based off of https://phaser.io/examples/v2/p2-physics/accelerate-to-object
@@ -914,20 +908,14 @@ window.addEventListener('load', function(){
     }
                     
     function moveToHole(obj) {
-        if (isChasing) {
-            return;
-        }
+        if (isChasing) return;
         if ((obj["name"] != 'player') || suckable) {
             if (obj.body) {
                 for (var i in holes) {
                     if ((holes[i] != obj) && holes[i].alive) {
-                        if (obj['name'] != 'object') {
-                            moveTowards(obj, holes[i], (holes[i].width/15)+19);
-                        }
+                        if (obj['name'] !== 'object') moveTowards(obj, holes[i], (holes[i].width/15)+19);
                         if ((Phaser.Math.distance(holes[i].x, holes[i].y, obj.x, obj.y) <= (10+(holes[i].width*0.75)+obj.offsetX))) {
-                            if (dieSound) {
-                                dieAudio.play('', 0, 1);
-                            }
+                            if (dieSound) dieAudio.play('', 0, 1);
                             if (suckable) {
                                 obj.body.x = game.rnd.integerInRange(5, W-5);
                                 obj.body.y = game.rnd.integerInRange(5, H-5);
@@ -1091,7 +1079,7 @@ window.addEventListener('load', function(){
                 game.add.text(5, 385, "F12: toggle fullscreen mode", defaultFont, textGroup).sendToBack();
             }
         } else {
-            defaultFont = {font: "25px Consolas", fill: "#fff"};
+            defaultFont.fontSize = 25;
             game.add.text(10, 5, "swiping in any direction: moves the tiny square", defaultFont, textGroup).sendToBack();
             game.add.text(10, 35, "hold for four seconds: resets character", defaultFont, textGroup).sendToBack();
             game.add.text(10, 65, "two fingers: save game", defaultFont, textGroup).sendToBack();
@@ -1265,7 +1253,10 @@ window.addEventListener('load', function(){
         game.camera.follow(player);
         game.camera.deadzone = new Phaser.Rectangle(0, 0, W, H);
         
-        cheet('↑ ↑ ↓ ↓ ← → ← → b a', konamiCode);
+        cheet('↑ ↑ ↓ ↓ ← → ← → b a', () => {
+            buildingMode = false;
+            suckable = true;     
+        });
         cheet('d i e', function() {
             dieSound = !dieSound;
             dieAudio.play('', 0, 1);
@@ -1293,8 +1284,8 @@ window.addEventListener('load', function(){
             });
             lives = 5;
             tipText = game.add.text(5, 5, "Tip: Black holes will fight off enemies.", defaultFont);
-            livesText = game.add.text(5, H-30, "5 lives remaining", {font: "20px Consolas", fill: "#fff"});
-            timerText = game.add.text(5, H-60, "2:30", {font: "20px Consolas", fill: "#fff"});
+            livesText = game.add.text(5, H-30, "5 lives remaining", {font: defaultFontType, fontSize: 20, fill: "#fff"});
+            timerText = game.add.text(5, H-60, "2:30", {font: defaultFontType, fontSize: 20, fill: "#fff"});
             countdown.start();
             textGroup.visible = false;
             game.add.audio('glass').play('', 0, 0.75);
@@ -1560,11 +1551,11 @@ window.addEventListener('load', function(){
                 showCancelButton: true,
                 confirmButtonText: 'hack',
                 cancelButtonText: 'cancel'
-            }).then(input => {
-                if (input.value) {
+            }).then(__INPUT => {
+                if (__INPUT.value) {
                     let resp, mode = "success";
                     try {
-                        resp = eval(input.value);
+                        resp = eval(__INPUT.value);
                     } catch(err) {
                         mode = "error";
                         resp = err;
