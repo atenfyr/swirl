@@ -14,7 +14,7 @@ const {autoUpdater} = require('electron-updater');
 let mainWindow;
 function createWindow() {
     const display = electron.screen.getPrimaryDisplay().workArea;
-    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: args.integration, preload: (args.pretend?(void 0):path.join(__dirname, 'preload.js'))}, width: display.width, height: display.height, title: "Swirl", icon: './assets/images/logo.png', show: false});
+    mainWindow = new electron.BrowserWindow({webPreferences: {nodeIntegration: Boolean(args.integration), preload: (args.pretend?(void 0):path.join(__dirname, 'preload.js'))}, width: display.width, height: display.height, title: "Swirl", icon: './assets/images/logo.png', show: false});
     mainWindow.maximize();
     mainWindow.loadURL(`file://${__dirname}/index.html`);
     
