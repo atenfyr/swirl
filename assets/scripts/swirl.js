@@ -22,7 +22,7 @@ if (isClient) {
 window.addEventListener('load', function(){
     let W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     let H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-    const defaultFontType = 'Consolas, Monaco, sans-serif';
+    const defaultFontType = 'Consolas, Verdana, sans-serif';
 
     /**
      * Swirl API for scripts. Note that scripts have access to everything defined in the source; the Swirl API is primarily for convenience and backwards-compatibility.

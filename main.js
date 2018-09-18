@@ -91,18 +91,6 @@ function createWindow() {
     });
 }
 
-let shouldQuit = app.makeSingleInstance(function() {
-    if (mainWindow) {
-        if (mainWindow.isMinimized()) mainWindow.restore();
-        mainWindow.focus();
-    }
-});
-
-if (shouldQuit) {
-    app.quit();
-    return;
-}
-
 app.on('ready', function() {
     autoUpdater.checkForUpdatesAndNotify();
     createWindow();
