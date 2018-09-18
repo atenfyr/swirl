@@ -1,18 +1,27 @@
-const electron = require('electron');
-const {ipcRenderer} = require('electron');
+/*
+    You really shouldn't be using anything defined here in your scripts.
+    Everything here is used internally in order to prevent giving the
+    Electron API to scripts, and that's about it.
 
-const whitelist = ['inspectFile', 'save', 'load', 'fullscreen', 'refresh', 'devTools'];
-window.electronSendMessage = (msg, arg) => {
-    if (typeof(msg) !== 'string') return false;
-    if (!whitelist.includes(msg)) return false;
-    msg = msg.charAt(0).toUpperCase() + msg.slice(1);
+    That being said, if you still need to use these for some odd reason,
+    you can. However, there's probably a better way to do whatever you
+    want to do, and I'm not going to make any promises regarding
+    backwards-compatibility.
+*/
 
-    return new Promise(resolve => {
-        ipcRenderer.send('swirl' + msg, arg);
-        ipcRenderer.on('rswirl' + msg, (event, result) => {
-            resolve(result);
-        });
+const e = require('electron');
+const p = e.ipcRenderer;
+
+window.swirlDesktopApp = {};
+
+const w = ['inspect', 'save', 'load', 'fullscreen', 'devtools'];
+window.swirlDesktopApp.send = (m, a) => {
+    if (!w.includes(m)) throw new Error('Invalid message');
+    return new Promise(r => {
+        p.send(m, a);
+        p.on('_'+m, (_, v) => {r(v)});
     });
 }
 
-window.electronArgs = electron.remote.process.argv;
+window.swirlDesktopApp.argv = e.remote.process.argv;
+window.swirlDesktopApp.version = e.remote.app.getVersion();
