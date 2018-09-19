@@ -23,13 +23,17 @@ function createWindow() {
             let selectedPath = process.argv[1];
             if (args.script) selectedPath = args.script;
 
-            fs.readFile(selectedPath, 'utf-8', (err, data) => {
-                if (err) {
-                    event.sender.send('_inspect', false);
-                } else {
-                    event.sender.send('_inspect', data);
-                }
-            });
+            if (!selectedPath) {
+                event.sender.send('_inspect', false);
+            } else {
+                fs.readFile(selectedPath, 'utf-8', (err, data) => {
+                    if (err) {
+                        event.sender.send('_inspect', false);
+                    } else {
+                        event.sender.send('_inspect', data);
+                    }
+                });
+            }
         });
 
         ipcMain.on('save', (event, data) => {

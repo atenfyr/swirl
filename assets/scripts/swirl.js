@@ -186,7 +186,7 @@ window.addEventListener('load', function(){
          * @see swirl.decodeb64
         */
         base64: function(text) {
-            console.warn('Warning: swirl.base64 is deprecated and will be removed in the recent future. Please use swirl.decodeb64.');
+            console.warn('Warning: swirl.base64 is deprecated and will be removed in the near future. Please use swirl.decodeb64.');
             return this.decodeb64(text);
         },
         /**
@@ -452,7 +452,7 @@ window.addEventListener('load', function(){
          * @returns {SaveData} Some save data which represents the world when the function was called.
          */
         save: function() {
-            console.warn('Warning: swirl.save is deprecated and will be removed in the recent future.');
+            console.warn('Warning: swirl.save is deprecated and will be removed in the near future.');
             return new this.Save().store().data;
         },
         /**
@@ -463,7 +463,7 @@ window.addEventListener('load', function(){
          * @param {SaveData} data 
          */
         load: function(data) {
-            console.warn('Warning: swirl.load is deprecated and will be removed in the recent future.');
+            console.warn('Warning: swirl.load is deprecated and will be removed in the near future.');
             new this.Save(data).load();
         },
         /**
@@ -526,7 +526,7 @@ window.addEventListener('load', function(){
          * 
          * @memberof swirl
          */
-        forceRedraw: function(){
+        forceRedraw: function() {
             W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
             H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
             game.width = W;
