@@ -276,8 +276,8 @@ window.addEventListener('load', function(){
                 switch(mode) {
                     case 'file':
                         let save = data.split('\n');
-                        if (save[0]) this.data = JSON.parse(swirl.decode(save[0]));
-                        if (save[1]) this.script = swirl.decodeb64(save[1]);
+                        if (save[0].trim()) this.data = JSON.parse(swirl.decode(save[0].trim()));
+                        if (save[1].trim()) this.script = swirl.decodeb64(save[1].trim());
                         break;
                     case 'url':
                         let thisSearch = new URL(data).searchParams;
@@ -311,13 +311,11 @@ window.addEventListener('load', function(){
                         if (this.script) data += swirl.encodeb64(this.script);
 
                         return data;
-                        break; // I know this break is unnecessary but I feel nervous if it isn't there
                     case 'url':
                         let modelURL = new URL(window.location.protocol + "//" + window.location.host + window.location.pathname);
                         if (this.data) modelURL.searchParams.set('load', swirl.encode(JSON.stringify(this.data)));
                         if (this.script) modelURL.searchParams.set('script', swirl.encodeb64(this.script));
                         return modelURL.href;
-                        break;
                     default:
                         if (!this.data) return '';
                         return swirl.encode(JSON.stringify(this.data));
